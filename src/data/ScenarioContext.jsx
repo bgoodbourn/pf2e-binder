@@ -15,11 +15,13 @@ import {
   listLocalScenarios,
   getLocalScenario,
   getLocalOverlay,
+  putLocalScenario,
   putLocalOverlay,
   saveOverlayDebounced,
 } from "./repo.js";
 import { initSync, pullScenario, pullOverlay, syncEnabled } from "./sync.js";
-import { emptyOverlayBody, SCHEMA_VERSION, isoNow } from "./schema.js";
+import { remoteUpsertScenario } from "./supabase.js";
+import { emptyOverlayBody, emptyScenario, slugify, SCHEMA_VERSION, isoNow } from "./schema.js";
 
 const WIKI = "https://pathfinderwiki.com/wiki/";
 const ACTIVE_PREF = "binder:active-scenario:v1";
@@ -165,11 +167,33 @@ export function ScenarioProvider({ children }) {
     [activeId]
   );
 
+  // Create a blank custom scenario, persist it, and make it active.
+  const createScenario = useCallback(async (title) => {
+    const list = await listLocalScenarios();
+    const taken = new Set(list.map((s) => s.scenario_id));
+    let id = slugify(title);
+    if (taken.has(id)) {
+      let n = 2;
+      while (taken.has(`${id}-${n}`)) n++;
+      id = `${id}-${n}`;
+    }
+    const base = emptyScenario(title, id);
+    await putLocalScenario(base);
+    setScenarios(await listLocalScenarios());
+    await storage.set(ACTIVE_PREF, id);
+    activeIdRef.current = id;
+    setScenario(base);
+    setOverlay(emptyOverlayBody());
+    setActiveIdState(id);
+    if (syncEnabled) remoteUpsertScenario(base).catch(() => {});
+    return id;
+  }, []);
+
   const links = useMemo(() => buildLinkMaps(scenario?.links), [scenario]);
 
   const value = useMemo(
-    () => ({ ready, scenarios, activeId, setActiveId, scenario, overlay, patch, links }),
-    [ready, scenarios, activeId, setActiveId, scenario, overlay, patch, links]
+    () => ({ ready, scenarios, activeId, setActiveId, createScenario, scenario, overlay, patch, links }),
+    [ready, scenarios, activeId, setActiveId, createScenario, scenario, overlay, patch, links]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

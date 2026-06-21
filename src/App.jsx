@@ -694,6 +694,45 @@ function NotesBox({ value, onChange }) {
   );
 }
 
+/* create a blank custom scenario: just a title */
+function NewScenario({ onCreate, onClose }) {
+  const [title, setTitle] = useState("");
+  const [busy, setBusy] = useState(false);
+  const valid = title.trim();
+  const submit = async () => {
+    if (!valid || busy) return;
+    setBusy(true);
+    await onCreate(title.trim());
+  };
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card narrow" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h3 className="modal-title">new custom scenario</h3>
+          <button className="modal-x" onClick={onClose} aria-label="close">×</button>
+        </div>
+        <label className="field span2"><span>title <i>*</i></span>
+          <input
+            className="inp"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            placeholder="e.g. My Homebrew Campaign"
+            autoFocus
+          />
+        </label>
+        <p className="import-note" style={{ marginTop: 12 }}>
+          Starts empty — add your own characters, NPCs, and encounters. Scenario notes can be generated later.
+        </p>
+        <div className="modal-foot">
+          <button className="mini" onClick={onClose}>cancel</button>
+          <button className="btn" disabled={!valid || busy} onClick={submit}>{busy ? "creating…" : "create"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* quick-add NPC: name, ancestry, description */
 function AddNpc({ onAdd, onClose }) {
   const [f, setF] = useState({ name: "", ancestry: "", description: "" });
@@ -1371,6 +1410,18 @@ function ScenarioView({ section, onGo }) {
   const tabs = scenario?.tabs || [];
   const symFor = scenario?.symFor || {};
   const meta = scenario?.meta || {};
+  // A custom campaign has no authored notes (no tabs) — show a friendly empty state.
+  if (tabs.length === 0) {
+    return (
+      <article className="article">
+        <div className="importer">
+          <ScenSym name="overview" className="import-sym" />
+          <h2 className="import-title">{meta.title || "custom campaign"}</h2>
+          <p className="import-lead">no scenario notes are available for a custom campaign.</p>
+        </div>
+      </article>
+    );
+  }
   if (section === "maps") return <MapsView maps={scenario?.maps || []} onGo={onGo} />;
   const group = tabs.find((g) => g.items.some((i) => i.id === section));
   const item = group && group.items.find((i) => i.id === section);
@@ -1844,7 +1895,7 @@ const MANAGERS = [
  *  ROOT — binder shell + manager switch + persistence
  * ================================================================== */
 function BinderApp() {
-  const { ready, scenario: S, scenarios, activeId, setActiveId, overlay, patch } = useScenarioData();
+  const { ready, scenario: S, scenarios, activeId, setActiveId, createScenario, overlay, patch } = useScenarioData();
 
   // UI-only state (selections, modals); all persisted data comes from overlay.
   const [workspace, setWorkspace] = useState("characters"); // characters | scenario | encounters
@@ -1858,6 +1909,7 @@ function BinderApp() {
   const [adding, setAdding] = useState(false);
   const [activeEnc, setActiveEnc] = useState(null);
   const [addNpcOpen, setAddNpcOpen] = useState(false);
+  const [newScenOpen, setNewScenOpen] = useState(false);
 
   // Overlay-derived collections (the user's editable state for this scenario).
   const pcs = useMemo(() => (overlay.pcs || []).map((raw) => parseBuild(raw)).filter(Boolean), [overlay.pcs]);
@@ -1876,6 +1928,20 @@ function BinderApp() {
       setWorkspace("scenario");
     },
     [setActiveId]
+  );
+
+  const handleCreateScenario = useCallback(
+    async (title) => {
+      await createScenario(title);
+      setActivePc(null);
+      setNpcSel(null);
+      setActiveEnc(null);
+      setScenSection("overview");
+      setAdding(false);
+      setWorkspace("scenario");
+      setNewScenOpen(false);
+    },
+    [createScenario]
   );
 
   // Effective selections fall back to the first item (no setState-in-effect).
@@ -2112,12 +2178,16 @@ function BinderApp() {
           <select
             className="scen-switch"
             value={activeId || ""}
-            onChange={(e) => switchScenario(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value === "__new__") setNewScenOpen(true);
+              else switchScenario(e.target.value);
+            }}
             aria-label="active scenario"
           >
             {scenarios.map((s) => (
               <option key={s.scenario_id} value={s.scenario_id}>{s.title}</option>
             ))}
+            <option value="__new__">+ new custom scenario…</option>
           </select>
         )}
       </div>
@@ -2298,6 +2368,7 @@ function BinderApp() {
       </div>
 
       {addNpcOpen && <AddNpc onAdd={addCustomNpc} onClose={() => setAddNpcOpen(false)} />}
+      {newScenOpen && <NewScenario onCreate={handleCreateScenario} onClose={() => setNewScenOpen(false)} />}
 
       <Style />
     </div>

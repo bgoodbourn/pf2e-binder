@@ -71,3 +71,33 @@ export function migrateOverlay(blob, scenarioId) {
 export function isoNow() {
   return new Date().toISOString();
 }
+
+// Turn a title into a stable slug for use as scenario_id / JSON filename.
+export function slugify(s) {
+  return (
+    (s || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "scenario"
+  );
+}
+
+// A blank custom scenario: no notes/npcs/maps/encounters/links yet.
+export function emptyScenario(title, scenarioId) {
+  return {
+    scenario_id: scenarioId,
+    schema_version: SCHEMA_VERSION,
+    title: title || "Untitled campaign",
+    meta: { title: title || "Untitled campaign", sub: "Custom campaign" },
+    tabs: [],
+    symFor: {},
+    content: {},
+    npcs: [],
+    maps: [],
+    encounters: [],
+    links: {},
+    custom: true,
+    updated_at: isoNow(),
+  };
+}
