@@ -3812,7 +3812,7 @@ button{font-family:inherit;}
 .cbt-note-input::placeholder{color:#bdbcb5;}
 /* encounter body: combatant list + running sheet */
 .enc-body{display:flex;gap:16px;align-items:flex-start;}
-.running-sheet{flex:0 0 204px;border:1px solid var(--line);border-radius:16px;background:#fbfbfa;padding:14px 13px 12px;}
+.running-sheet{flex:0 0 248px;border:1px solid var(--line);border-radius:16px;background:#fbfbfa;padding:14px 13px 12px;}
 .rs-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
 .rs-label{font-size:10.5px;text-transform:lowercase;letter-spacing:.06em;color:var(--faint);}
 .rs-add{border:0;background:var(--hush);border-radius:999px;padding:3px 9px;font-size:11px;color:var(--ink-3);cursor:pointer;
@@ -3882,7 +3882,7 @@ button{font-family:inherit;}
 .enc-map-ctrl .inp{flex:1;min-width:160px;}
 .filebtn{cursor:pointer;}
 
-.cbt-list{display:flex;flex-direction:column;gap:8px;}
+.cbt-list{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;}
 .cbt-empty{color:var(--faint);font-size:13.5px;text-transform:lowercase;padding:18px 2px;}
 .cbt{display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--panel);}
 .cbt.kind-enemy{border-left:3px solid var(--ink);}
