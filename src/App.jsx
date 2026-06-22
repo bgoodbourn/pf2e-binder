@@ -2897,6 +2897,10 @@ function BinderApp() {
   const [section, setSection] = useState("overview");
   const [scenSection, setScenSection] = useState("overview");
   const [navOpen, setNavOpen] = useState(false);
+  // hideable top dock: auto-pin on narrow screens (no hover), hover-reveal on desktop
+  const [dockLocked, setDockLocked] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width:880px)").matches);
+  const [dockHover, setDockHover] = useState(false);
+  const dockVisible = dockLocked || dockHover;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [adding, setAdding] = useState(false);
@@ -3151,7 +3155,6 @@ function BinderApp() {
   if (!ready) {
     return (
       <div className="shell">
-        <div className="managers"><div className="managers-brand">campaign binder</div></div>
         <div className="app">
           <main className="content"><div className="panel" style={{ padding: 40, color: "var(--ink-3)" }}>loading…</div></main>
         </div>
@@ -3162,40 +3165,63 @@ function BinderApp() {
 
   return (
     <div className="shell">
-      {/* persistent manager switch — always at the top */}
-      <div className="managers">
-        <div className="managers-brand">campaign binder</div>
-        <div className="managers-tabs">
-          {MANAGERS.map((m) => (
-            <button
-              key={m.id}
-              className={`ms-btn ${workspace === m.id ? "on" : ""}`}
-              onClick={() => switchTo(m.id)}
-            >
-              <Sym name={m.sym} className="ms-sym" />
-              <span>{m.label}</span>
-            </button>
-          ))}
-        </div>
-        {scenarios.length > 0 && (
-          <select
-            className="scen-switch"
-            value={activeId || ""}
-            onChange={(e) => {
-              if (e.target.value === "__new__") setNewScenOpen(true);
-              else switchScenario(e.target.value);
-            }}
-            aria-label="active scenario"
-          >
-            {scenarios.map((s) => (
-              <option key={s.scenario_id} value={s.scenario_id}>{s.title}</option>
+      {/* hideable top dock — hover the top edge to reveal, pin to lock */}
+      <div
+        className={`dock-region ${dockVisible ? "shown" : ""}`}
+        onMouseEnter={() => setDockHover(true)}
+        onMouseLeave={() => setDockHover(false)}
+      >
+        <div className="managers">
+          <div className="managers-brand">campaign binder</div>
+          <div className="managers-tabs">
+            {MANAGERS.map((m) => (
+              <button
+                key={m.id}
+                className={`ms-btn ${workspace === m.id ? "on" : ""}`}
+                onClick={() => switchTo(m.id)}
+              >
+                <span className="ms-box"><Sym name={m.sym} className="ms-sym" /></span>
+                <span>{m.label}</span>
+              </button>
             ))}
-            <option value="__new__">+ new custom scenario…</option>
-          </select>
+          </div>
+          <div className="dock-right">
+            <button
+              className={`dock-pin ${dockLocked ? "on" : ""}`}
+              onClick={() => { setDockLocked((v) => !v); setDockHover(false); }}
+            >
+              <span className="dock-pin-dot" />
+              {dockLocked ? "pinned" : "pin menu"}
+            </button>
+            {scenarios.length > 0 && (
+              <select
+                className="scen-switch"
+                value={activeId || ""}
+                onChange={(e) => {
+                  if (e.target.value === "__new__") setNewScenOpen(true);
+                  else switchScenario(e.target.value);
+                }}
+                aria-label="active scenario"
+              >
+                {scenarios.map((s) => (
+                  <option key={s.scenario_id} value={s.scenario_id}>{s.title}</option>
+                ))}
+                <option value="__new__">+ new custom scenario…</option>
+              </select>
+            )}
+          </div>
+        </div>
+
+        {!dockVisible && (
+          <button className="dock-handle" onClick={() => setDockLocked(true)} aria-label="show menu">
+            <span className="dock-handle-grip" />
+            menu
+            <span className="dock-handle-caret">▾</span>
+          </button>
         )}
       </div>
 
-      <div className="app">
+      <div className={`app ${dockLocked ? "docked" : ""}`}>
         {workspace === "gmnotes" ? (
           <GmNotes key={activeId || "none"} initialPages={overlay.gmPages || []} onPersist={persistGmPages} npcs={allNpcs} encounters={encounters} onOpenNpc={openNpc} onOpenEncounter={openEncounter} />
         ) : (
@@ -3401,6 +3427,7 @@ function Style() {
 :root{
   --canvas:#F4F4F2;--panel:#FFFFFF;--ink:#111111;--ink-2:#3a3a38;--ink-3:#6c6c68;
   --faint:#9a9a95;--line:#e7e6e1;--line-2:#ededea;--hush:#f1f0ec;--pill:#0e0e0e;--pill-text:#f5f5f3;
+  --accent:#bc5f3c;--accent-tint:#f5e8e1;--accent-dark:#9e4e30;
 }
 *{box-sizing:border-box;}
 html,body,#root{height:100%;}
@@ -3410,23 +3437,52 @@ html,body,#root{height:100%;}
 svg{display:block;}
 button{font-family:inherit;}
 
-/* persistent top manager switch */
-.managers{display:flex;align-items:center;gap:18px;padding:13px 22px;background:var(--canvas);
-  border-bottom:1px solid var(--line);}
+/* ---- hideable top dock ---- */
+.dock-region{position:absolute;top:0;left:0;right:0;z-index:30;height:18px;}
+.dock-region.shown{height:60px;}
+.managers{display:flex;align-items:center;gap:16px;padding:0 22px;height:60px;
+  background:var(--panel);border-bottom:1px solid var(--line);
+  box-shadow:0 14px 30px -20px rgba(17,17,17,.45);
+  transform:translateY(-101%);transition:transform .22s ease;}
+.dock-region.shown .managers{transform:translateY(0);}
 .managers-brand{font-family:'Inter Tight',sans-serif;font-weight:700;font-size:15px;letter-spacing:-.02em;
-  text-transform:lowercase;color:var(--ink);padding-right:4px;}
-.managers-tabs{display:flex;gap:8px;}
-.ms-btn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);
-  border-radius:12px;padding:9px 16px;font-size:13.5px;color:var(--ink-3);cursor:pointer;text-transform:lowercase;
-  transition:background .14s,color .14s,border-color .14s;}
-.ms-sym{width:15px;height:15px;}
-.ms-btn:hover{border-color:var(--ink-3);color:var(--ink);}
-.ms-btn.on{background:var(--pill);color:var(--pill-text);border-color:var(--pill);}
-.ms-btn.on .ms-sym{color:var(--pill-text);}
-.scen-switch{margin-left:auto;border:1px solid var(--line);background:var(--panel);border-radius:12px;
+  text-transform:lowercase;color:var(--ink);}
+.managers-tabs{display:flex;gap:3px;margin-left:6px;}
+/* icon-box "dock look" tab */
+.ms-btn{display:flex;align-items:center;gap:9px;border:0;background:transparent;
+  border-radius:12px;padding:6px 11px;font-size:13.5px;color:var(--ink-3);
+  cursor:pointer;text-transform:lowercase;font-family:inherit;transition:color .14s;}
+.ms-box{width:34px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  background:var(--hush);color:var(--ink-2);transition:background .14s,color .14s;}
+.ms-sym{width:19px;height:19px;}
+.ms-btn:hover{color:var(--ink);}
+.ms-btn:hover .ms-box{background:#ececea;}
+.ms-btn.on{color:var(--ink);}
+.ms-btn.on .ms-box{background:var(--accent-tint);color:var(--accent);}
+.dock-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+/* pin toggle */
+.dock-pin{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);
+  color:var(--ink-3);border-radius:10px;padding:7px 13px;font-size:12.5px;cursor:pointer;
+  font-family:inherit;text-transform:lowercase;transition:.14s;}
+.dock-pin-dot{width:8px;height:8px;border-radius:50%;border:1.6px solid var(--faint);}
+.dock-pin.on{border-color:var(--accent);background:var(--accent-tint);color:var(--accent);}
+.dock-pin.on .dock-pin-dot{border:0;background:var(--accent);}
+/* pull handle */
+.dock-handle{position:absolute;left:50%;top:0;transform:translateX(-50%);
+  display:flex;align-items:center;gap:9px;
+  background:#16150f;color:#f5f4f1;border:0;border-radius:0 0 13px 13px;
+  padding:6px 18px 7px;font-size:11.5px;font-family:inherit;text-transform:lowercase;
+  cursor:pointer;box-shadow:0 8px 18px -10px rgba(0,0,0,.5);}
+.dock-handle-grip{width:13px;height:1.6px;border-radius:2px;background:currentColor;
+  box-shadow:0 4px 0 currentColor,0 -4px 0 currentColor;}
+.dock-handle-caret{font-size:9px;opacity:.7;}
+.scen-switch{border:1px solid var(--line);background:var(--panel);border-radius:12px;
   padding:8px 12px;font-size:13px;color:var(--ink-2);font-family:inherit;text-transform:lowercase;cursor:pointer;
   max-width:42vw;}
 .scen-switch:hover{border-color:var(--ink-3);color:var(--ink);}
+/* content clears the dock only while pinned */
+.app{transition:padding .2s ease;}
+.app.docked{padding-top:60px;}
 
 /* rail */
 .rail{width:290px;flex:0 0 290px;display:flex;flex-direction:column;padding:24px 18px 14px;}
@@ -3445,9 +3501,9 @@ button{font-family:inherit;}
 .rail-arrow{opacity:0;transform:translateX(-3px);transition:opacity .14s,transform .14s;font-size:13px;color:var(--ink-3);}
 .rail-tab:hover{background:#ececea;color:var(--ink);}
 .rail-tab:hover .rail-arrow{opacity:1;transform:translateX(0);}
-.rail-tab.active{background:var(--pill);color:var(--pill-text);}
-.rail-tab.active .rail-sym{color:var(--pill-text);}
-.rail-tab.active .rail-arrow,.rail-tab.active .rail-sub{opacity:1;transform:translateX(0);color:var(--pill-text);}
+.rail-tab.active{background:var(--accent-tint);color:var(--ink);box-shadow:inset 3px 0 0 var(--accent);}
+.rail-tab.active .rail-sym{color:var(--accent);}
+.rail-tab.active .rail-arrow,.rail-tab.active .rail-sub{opacity:1;transform:translateX(0);color:var(--ink-3);}
 .rail-tab.add{color:var(--ink-3);}
 .rail-plus{width:18px;text-align:center;font-size:17px;color:var(--ink-3);}
 
@@ -3942,12 +3998,16 @@ button{font-family:inherit;}
 
 @media (max-width:880px){
   .shell{height:auto;min-height:100vh;}
-  .managers{flex-wrap:wrap;gap:10px 12px;padding:12px 16px;position:sticky;top:0;z-index:25;
-    background:rgba(244,244,242,.96);backdrop-filter:blur(6px);}
+  /* dock becomes a normal static bar on narrow screens (no hover) */
+  .dock-region{position:static;height:auto;}
+  .dock-region .managers{transform:none;height:auto;box-shadow:none;flex-wrap:wrap;gap:10px 12px;
+    padding:12px 16px;position:sticky;top:0;z-index:25;background:rgba(244,244,242,.96);backdrop-filter:blur(6px);}
   .managers-brand{width:100%;}
-  .managers-tabs{flex:1;}
-  .ms-btn{flex:1;justify-content:center;padding:9px 8px;}
-  .app{display:block;height:auto;min-height:0;}
+  .managers-tabs{flex:1;flex-wrap:wrap;gap:6px;margin-left:0;}
+  .ms-btn{flex:1;justify-content:center;padding:6px 8px;}
+  .dock-right{margin-left:0;width:100%;}
+  .dock-handle{display:none;}
+  .app,.app.docked{display:block;height:auto;min-height:0;padding-top:0;}
   .rail{position:fixed;top:0;left:0;bottom:0;z-index:40;width:280px;background:var(--canvas);padding-top:20px;
     transform:translateX(-100%);transition:transform .22s ease;box-shadow:0 0 60px rgba(0,0,0,.12);}
   .rail.open{transform:translateX(0);}
