@@ -743,31 +743,152 @@ function NewScenario({ onCreate, onClose }) {
   );
 }
 
-/* quick-add NPC: name, ancestry, description */
+/* parse helpers for the full-npc form */
+const npcNum = (s) => {
+  const t = (s || "").trim();
+  if (!t) return null;
+  const n = parseInt(t, 10);
+  return Number.isNaN(n) ? null : n;
+};
+const npcList = (s) => (s || "").split(",").map((x) => x.trim()).filter(Boolean);
+const npcLines = (s) => (s || "").split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
+const npcSkills = (s) =>
+  npcList(s).map((item) => {
+    const m = item.match(/^(.*?)\s*([+-]\d+)\s*$/);
+    return m ? [m[1].trim(), parseInt(m[2], 10)] : [item, 0];
+  });
+
+const NPC_ABILS = ["str", "dex", "con", "int", "wis", "cha"];
+
+/* add NPC: two modes — quick (name + description) or full stat block */
 function AddNpc({ onAdd, onClose }) {
-  const [f, setF] = useState({ name: "", ancestry: "", description: "" });
+  const [mode, setMode] = useState("quick");
+  const [f, setF] = useState({
+    name: "", ancestry: "", source: "", description: "", tactics: "",
+    level: "", ac: "", hp: "", perception: "", fort: "", ref: "", will: "",
+    traits: "", skills: "", speed: "", languages: "", strikes: "", spells: "",
+    str: "", dex: "", con: "", int: "", wis: "", cha: "",
+  });
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
   const valid = f.name.trim();
+
   const submit = () => {
     if (!valid) return;
-    onAdd({ name: f.name.trim(), ancestry: f.ancestry.trim(), description: f.description.trim() });
+    if (mode === "quick") {
+      onAdd({ name: f.name.trim(), ancestry: f.ancestry.trim(), description: f.description.trim() });
+    } else {
+      const traits = npcList(f.traits);
+      const ancestry = f.ancestry.trim();
+      if (ancestry && !traits.some((t) => t.toLowerCase() === ancestry.toLowerCase())) traits.unshift(ancestry);
+      const anyAb = NPC_ABILS.some((k) => f[k].trim());
+      onAdd({
+        name: f.name.trim(),
+        ancestry,
+        traits,
+        source: f.source.trim(),
+        description: f.description.trim(),
+        notes: f.tactics.trim(),
+        level: npcNum(f.level),
+        ac: npcNum(f.ac), hp: npcNum(f.hp), perception: npcNum(f.perception),
+        fort: npcNum(f.fort), ref: npcNum(f.ref), will: npcNum(f.will),
+        abilities: anyAb ? Object.fromEntries(NPC_ABILS.map((k) => [k, npcNum(f[k]) ?? 0])) : null,
+        skills: npcSkills(f.skills),
+        speed: f.speed.trim(),
+        languages: npcList(f.languages),
+        attacks: npcLines(f.strikes),
+        spells: npcLines(f.spells),
+      });
+    }
     onClose();
   };
+
+  const tabStyle = { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "9px 14px", borderRadius: 9 };
+  const groupHead = { fontSize: 10.5, letterSpacing: ".04em", textTransform: "lowercase", color: "var(--faint)", margin: "2px 0 9px" };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card narrow" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <h3 className="modal-title">add npc</h3>
-          <button className="modal-x" onClick={onClose} aria-label="close">×</button>
+      <div className="modal-card" style={{ maxWidth: 580, maxHeight: "88vh", display: "flex", flexDirection: "column", padding: 0, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
+        {/* head + mode toggle */}
+        <div style={{ padding: "22px 24px 14px" }}>
+          <div className="modal-head" style={{ marginBottom: 14 }}>
+            <h3 className="modal-title" style={{ flex: 1 }}>add npc</h3>
+            <button className="modal-x" onClick={onClose} aria-label="close">×</button>
+          </div>
+          <div className="toggle" style={{ borderRadius: 13, padding: 5, gap: 5 }}>
+            <button className={`toggle-opt${mode === "quick" ? " on" : ""}`} style={tabStyle} onClick={() => setMode("quick")}>
+              <span style={{ fontSize: 13.5, fontWeight: 600 }}>name + description</span>
+              <span style={{ fontSize: 11, fontWeight: 400, color: "var(--faint)" }}>quick npc</span>
+            </button>
+            <button className={`toggle-opt${mode === "full" ? " on" : ""}`} style={tabStyle} onClick={() => setMode("full")}>
+              <span style={{ fontSize: 13.5, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}><span style={{ color: "var(--accent)" }}>✦</span>full details</span>
+              <span style={{ fontSize: 11, fontWeight: 400, color: "var(--faint)" }}>full npc</span>
+            </button>
+          </div>
         </div>
-        <div className="form-grid name-row">
-          <label className="field"><span>name <i>*</i></span><input className="inp" value={f.name} onChange={set("name")} autoFocus /></label>
-          <label className="field"><span>ancestry</span><input className="inp" value={f.ancestry} onChange={set("ancestry")} placeholder="e.g. human" /></label>
+
+        {/* body */}
+        <div style={{ overflowY: "auto", padding: "6px 24px 10px", flex: 1 }}>
+          {mode === "quick" ? (
+            <>
+              <div className="form-grid name-row">
+                <label className="field"><span>name <i>*</i></span><input className="inp" value={f.name} onChange={set("name")} placeholder="e.g. themolin" autoFocus /></label>
+                <label className="field"><span>ancestry</span><input className="inp" value={f.ancestry} onChange={set("ancestry")} placeholder="e.g. human" /></label>
+              </div>
+              <label className="field span2" style={{ marginTop: 14 }}><span>description</span><textarea className="inp area" rows={4} value={f.description} onChange={set("description")} placeholder="who they are, what the party knows…" /></label>
+            </>
+          ) : (
+            <>
+              <div className="form-grid name-row">
+                <label className="field"><span>name <i>*</i></span><input className="inp" value={f.name} onChange={set("name")} autoFocus /></label>
+                <label className="field"><span>creature lvl</span><input className="inp" type="number" value={f.level} onChange={set("level")} placeholder="3" /></label>
+              </div>
+              <div className="form-grid name-row" style={{ marginTop: 12 }}>
+                <label className="field"><span>ancestry</span><input className="inp" value={f.ancestry} onChange={set("ancestry")} placeholder="human" /></label>
+                <label className="field"><span>source</span><input className="inp" value={f.source} onChange={set("source")} placeholder="appendix p.21" /></label>
+              </div>
+              <label className="field span2" style={{ marginTop: 12 }}><span>traits</span><input className="inp" value={f.traits} onChange={set("traits")} placeholder="unique, le, medium, human, humanoid" /></label>
+              <label className="field span2" style={{ marginTop: 12 }}><span>description</span><textarea className="inp area" rows={3} value={f.description} onChange={set("description")} placeholder="who they are, what the party knows…" /></label>
+              <label className="field span2" style={{ marginTop: 12 }}><span>role / tactics</span><textarea className="inp area" rows={2} value={f.tactics} onChange={set("tactics")} placeholder="how they behave in a scene or fight…" /></label>
+
+              <div style={{ ...groupHead, marginTop: 18 }}>combat stats</div>
+              <div className="form-grid three">
+                <label className="field"><span>armor class</span><input className="inp" value={f.ac} onChange={set("ac")} placeholder="17" /></label>
+                <label className="field"><span>hit points</span><input className="inp" value={f.hp} onChange={set("hp")} placeholder="31" /></label>
+                <label className="field"><span>perception</span><input className="inp" value={f.perception} onChange={set("perception")} placeholder="+7" /></label>
+              </div>
+
+              <div style={{ ...groupHead, marginTop: 16 }}>saving throws</div>
+              <div className="form-grid three">
+                <label className="field"><span>fortitude</span><input className="inp" value={f.fort} onChange={set("fort")} placeholder="+8" /></label>
+                <label className="field"><span>reflex</span><input className="inp" value={f.ref} onChange={set("ref")} placeholder="+9" /></label>
+                <label className="field"><span>will</span><input className="inp" value={f.will} onChange={set("will")} placeholder="+10" /></label>
+              </div>
+
+              <div style={{ ...groupHead, marginTop: 16 }}>ability modifiers</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 7 }}>
+                {NPC_ABILS.map((k) => (
+                  <label className="field" key={k} style={{ alignItems: "center", gap: 4 }}>
+                    <span style={{ textTransform: "uppercase" }}>{k}</span>
+                    <input className="inp" value={f[k]} onChange={set(k)} placeholder="+0" style={{ textAlign: "center", padding: "8px 4px" }} />
+                  </label>
+                ))}
+              </div>
+
+              <label className="field span2" style={{ marginTop: 16 }}><span>skills</span><input className="inp" value={f.skills} onChange={set("skills")} placeholder="arcana +11, society +9, stealth +7" /></label>
+              <div className="form-grid name-row" style={{ marginTop: 12 }}>
+                <label className="field"><span>speed</span><input className="inp" value={f.speed} onChange={set("speed")} placeholder="25 feet" /></label>
+                <label className="field"><span>languages</span><input className="inp" value={f.languages} onChange={set("languages")} placeholder="common, jotun, varisian" /></label>
+              </div>
+              <label className="field span2" style={{ marginTop: 12 }}><span>strikes</span><textarea className="inp area" rows={2} value={f.strikes} onChange={set("strikes")} placeholder="melee — staff +7 (1d4 B); ranged — crossbow +7 (1d8 P)" /></label>
+              <label className="field span2" style={{ marginTop: 12 }}><span>spells &amp; reactions</span><textarea className="inp area" rows={3} value={f.spells} onChange={set("spells")} placeholder="arcane prepared DC 20, attack +12; counterspell reaction…" /></label>
+            </>
+          )}
         </div>
-        <label className="field span2" style={{ marginTop: 14 }}><span>description</span><textarea className="inp area" rows={3} value={f.description} onChange={set("description")} placeholder="who they are, what they want…" /></label>
-        <div className="modal-foot">
+
+        {/* footer */}
+        <div className="modal-foot" style={{ margin: 0, padding: "16px 24px 18px", borderTop: "1px solid var(--hush)" }}>
           <button className="mini" onClick={onClose}>cancel</button>
-          <button className="btn" disabled={!valid} onClick={submit}>add</button>
+          <button className="btn" disabled={!valid} onClick={submit}>add npc</button>
         </div>
       </div>
     </div>
@@ -3272,11 +3393,23 @@ function BinderApp() {
       const id = "c" + uid();
       const npc = {
         id, custom: true, group: "npcs",
-        name: data.name, role: "", traits: data.ancestry ? [data.ancestry] : [],
+        name: data.name, role: "",
+        traits: data.traits && data.traits.length ? data.traits : (data.ancestry ? [data.ancestry] : []),
         description: data.description || "",
-        level: null, perception: null, ac: null, hp: null, fort: null, ref: null, will: null,
-        notes: "", source: "added by you",
+        level: data.level ?? null,
+        perception: data.perception ?? null,
+        ac: data.ac ?? null, hp: data.hp ?? null,
+        fort: data.fort ?? null, ref: data.ref ?? null, will: data.will ?? null,
+        notes: data.notes || "",
+        source: data.source || "added by you",
       };
+      // full-mode optional blocks — only attach when present so NpcSheet stays clean for quick adds
+      if (data.abilities) npc.abilities = data.abilities;
+      if (data.skills && data.skills.length) npc.skills = data.skills;
+      if (data.speed) npc.speed = data.speed;
+      if (data.languages && data.languages.length) npc.languages = data.languages;
+      if (data.attacks && data.attacks.length) npc.attacks = data.attacks;
+      if (data.spells && data.spells.length) npc.spells = data.spells;
       patch({ customNpcs: [...(overlay.customNpcs || []), npc] });
       setNpcSel(id);
       setAdding(false);
