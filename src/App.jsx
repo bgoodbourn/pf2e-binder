@@ -1280,7 +1280,6 @@ function ScenarioBlock({ b }) {
           <div className="enc-head">
             <span className="enc-area">{b.area} encounter</span>
             <span className="enc-die">{b.die}</span>
-            <span className="enc-ptr">encounters tool →</span>
           </div>
           {b.note && (
             <p className="enc-note">
@@ -1305,7 +1304,6 @@ function ScenarioBlock({ b }) {
               <Pict name="hazard" /> hazard
             </span>
             <span className="hazard-name">{b.name}</span>
-            <span className="enc-ptr">encounters tool →</span>
           </div>
           <p className="hazard-x">
             <RichText x={b.x} />
