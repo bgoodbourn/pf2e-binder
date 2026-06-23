@@ -672,6 +672,9 @@ function groupNpcs(list) {
     if (!map[g]) { map[g] = { label: g, items: [] }; order.push(map[g]); }
     map[g].items.push(n);
   });
+  // always surface an "npcs" group so the "add npc" button is reachable,
+  // even for a blank custom scenario with no NPCs yet
+  if (!map["npcs"]) order.push({ label: "npcs", items: [] });
   return order;
 }
 
