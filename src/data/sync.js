@@ -17,7 +17,7 @@ import {
   remoteGetOverlay,
   remoteUpsertOverlay,
 } from "./supabase.js";
-import { migrateScenario, migrateOverlay } from "./schema.js";
+import { migrateScenario, migrateOverlay, EPOCH } from "./schema.js";
 import {
   getLocalScenario,
   putLocalScenario,
@@ -62,7 +62,10 @@ export async function pullOverlay(id) {
       await putLocalOverlay(merged);
       return merged;
     }
-    if (newer(local.updated_at, remote?.updated_at)) {
+    // Only push a local overlay that has actually been written. A placeholder
+    // (never-saved) overlay carries the EPOCH timestamp; pushing it would
+    // clobber real remote data with a blank — exactly the bug that wiped notes.
+    if (local.updated_at !== EPOCH && newer(local.updated_at, remote?.updated_at)) {
       remoteUpsertOverlay(local).catch(() => {});
     }
     return local;

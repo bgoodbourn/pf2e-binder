@@ -23,11 +23,19 @@
  * ------------------------------------------------------------------ */
 export const SCHEMA_VERSION = 2;
 
+// A placeholder overlay (nothing stored yet) must NEVER win last-write-wins
+// against real remote data. Stamping it with "now" made a fresh device's blank
+// overlay look newer than the cloud copy, so it both refused to adopt the
+// remote notes AND pushed the blank up, clobbering them. Epoch guarantees any
+// genuine remote/local write is strictly newer and a placeholder is never
+// pushed (see pullOverlay's "don't push a placeholder" guard).
+export const EPOCH = "1970-01-01T00:00:00.000Z";
+
 export function emptyOverlayBody() {
   return { notes: {}, customNpcs: [], encounters: [], pcs: [], gmPages: [] };
 }
 
-export function emptyOverlay(scenarioId, updatedAt = isoNow()) {
+export function emptyOverlay(scenarioId, updatedAt = EPOCH) {
   return {
     scenario_id: scenarioId,
     schema_version: SCHEMA_VERSION,
