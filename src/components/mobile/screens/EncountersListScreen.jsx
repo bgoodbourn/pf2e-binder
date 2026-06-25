@@ -1,10 +1,10 @@
 /* Combat tab landing — the scenario's encounters. Tap a row to enter the
  * live initiative tracker. Reads the real overlay encounters. */
-import { IconChevDown, IconMonitor, IconSwords, IconPlus } from "../parts/MobileIcons.jsx";
+import { IconChevDown, IconMonitor, IconSwords } from "../parts/MobileIcons.jsx";
 
 export function EncountersListScreen({
   campaignName, encounters, activeEncounterId,
-  onOpen, onNew, onPrefill, onOpenScenarioPicker, onRequestDesktop, canPrefill,
+  onOpen, onPrefill, onOpenScenarioPicker, onRequestDesktop, canPrefill,
 }) {
   return (
     <div className="m-screen m-encounters">
@@ -41,10 +41,11 @@ export function EncountersListScreen({
           );
         })}
 
-        <div className="m-enc-actions">
-          <button className="m-add-row" onClick={onNew}><IconPlus size={15} /> new encounter</button>
-          {canPrefill && <button className="m-add-row" onClick={onPrefill}>↡ prefill from scenario</button>}
-        </div>
+        {canPrefill && (
+          <div className="m-enc-actions">
+            <button className="m-add-row" onClick={onPrefill}>↡ prefill from scenario</button>
+          </div>
+        )}
       </div>
     </div>
   );

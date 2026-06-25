@@ -154,13 +154,6 @@ export default function MobileApp({ onRequestDesktop }) {
     [encounter, updateEncounter]
   );
 
-  const addEncounter = useCallback(() => {
-    const id = uid();
-    writeEncounters([...encounters, { id, name: `encounter ${encounters.length + 1}`, map: "", combatants: [] }]);
-    setActiveEncounterId(id);
-    setScreen("initiative");
-  }, [encounters, writeEncounters]);
-
   const prefillEncounters = useCallback(() => {
     const names = new Set(encounters.map((e) => e.name));
     const added = buildScenarioEncounters(names, S?.encounters);
@@ -202,7 +195,6 @@ export default function MobileApp({ onRequestDesktop }) {
         encounters={encounters}
         activeEncounterId={encounter?.id}
         onOpen={openEncounter}
-        onNew={addEncounter}
         onPrefill={prefillEncounters}
         canPrefill={(S?.encounters || []).length > 0}
         onOpenScenarioPicker={() => setSheet("scenario")}
