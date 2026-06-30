@@ -92,7 +92,7 @@ const MANAGERS = [
  *  ROOT — binder shell + manager switch + persistence
  * ================================================================== */
 export function BinderApp({ onRequestMobile }) {
-  const { ready, scenario: S, scenarios, activeId, setActiveId, createScenario, overlay, patch } = useScenarioData();
+  const { ready, scenario: S, scenarios, activeId, setActiveId, createScenario, overlay, overlayId, patch } = useScenarioData();
 
   // UI-only state (selections, modals); all persisted data comes from overlay.
   // null = "no explicit choice yet" → fall back to the per-adventure default tab.
@@ -450,7 +450,16 @@ export function BinderApp({ onRequestMobile }) {
 
       <div className={`app ${dockLocked ? "docked" : ""}`}>
         {effWorkspace === "gmnotes" ? (
-          <GmNotes key={activeId || "none"} initialPages={overlay.gmPages || []} onPersist={persistGmPages} npcs={allNpcs} encounters={encounters} onOpenNpc={openNpc} onOpenEncounter={openEncounter} />
+          // GmNotes snapshots its content from initialPages once per mount, so it
+          // must not mount until the loaded overlay belongs to the active scenario.
+          // After a switch, activeId flips synchronously while the overlay loads
+          // async — render a brief placeholder until they agree, otherwise GmNotes
+          // would freeze on the previous scenario's notes.
+          overlayId === activeId ? (
+            <GmNotes key={activeId || "none"} initialPages={overlay.gmPages || []} onPersist={persistGmPages} npcs={allNpcs} encounters={encounters} onOpenNpc={openNpc} onOpenEncounter={openEncounter} />
+          ) : (
+            <main className="content"><div className="panel" style={{ padding: 40, color: "var(--ink-3)" }}>loading…</div></main>
+          )
         ) : (
         <>
         {/* ---- rail ---- */}

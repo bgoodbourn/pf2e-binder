@@ -87,6 +87,10 @@ export function ScenarioProvider({ children }) {
   const [activeId, setActiveIdState] = useState(null);
   const [scenario, setScenario] = useState(null);
   const [overlay, setOverlay] = useState(emptyOverlayBody);
+  // Which scenario the current `overlay` was loaded for. Lags `activeId` during
+  // the async load after a switch; the UI uses this to avoid showing one
+  // scenario's overlay under another scenario's id (see GmNotes gating in App).
+  const [overlayId, setOverlayId] = useState(null);
   const initialized = useRef(false);
   const activeIdRef = useRef(null); // guards background pulls against scenario switches
   const manualSwitchRef = useRef(false); // set once the user deliberately picks a scenario
@@ -100,7 +104,7 @@ export function ScenarioProvider({ children }) {
       .then((base) => { if (base && activeIdRef.current === id) setScenario(base); })
       .catch(() => {});
     pullOverlay(id)
-      .then((ov) => { if (ov && activeIdRef.current === id) setOverlay(ov.overlay); })
+      .then((ov) => { if (ov && activeIdRef.current === id) { setOverlay(ov.overlay); setOverlayId(id); } })
       .catch(() => {});
   }, []);
 
@@ -110,6 +114,7 @@ export function ScenarioProvider({ children }) {
       const [base, ov] = await Promise.all([getLocalScenario(id), getLocalOverlay(id)]);
       setScenario(base);
       setOverlay(ov.overlay);
+      setOverlayId(id);
       bgPull(id);
     },
     [bgPull]
@@ -135,6 +140,7 @@ export function ScenarioProvider({ children }) {
         const [base, ov] = await Promise.all([getLocalScenario(id), getLocalOverlay(id)]);
         setScenario(base);
         setOverlay(ov.overlay);
+        setOverlayId(id);
         activeIdRef.current = id;
         setActiveIdState(id);
       }
@@ -227,6 +233,7 @@ export function ScenarioProvider({ children }) {
     activeIdRef.current = id;
     setScenario(base);
     setOverlay(emptyOverlayBody());
+    setOverlayId(id);
     setActiveIdState(id);
     if (syncEnabled) remoteUpsertScenario(base).catch(() => {});
     return id;
@@ -235,8 +242,8 @@ export function ScenarioProvider({ children }) {
   const links = useMemo(() => buildLinkMaps(scenario?.links), [scenario]);
 
   const value = useMemo(
-    () => ({ ready, scenarios, activeId, setActiveId, createScenario, scenario, overlay, patch, links }),
-    [ready, scenarios, activeId, setActiveId, createScenario, scenario, overlay, patch, links]
+    () => ({ ready, scenarios, activeId, setActiveId, createScenario, scenario, overlay, overlayId, patch, links }),
+    [ready, scenarios, activeId, setActiveId, createScenario, scenario, overlay, overlayId, patch, links]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
