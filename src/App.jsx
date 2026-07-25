@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useScenarioData } from "./data/ScenarioContext.jsx";
 import { parseBuild, uid } from "./lib/pf2e.js";
+import { loadAonIndex } from "./lib/aon.js";
 import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters } from "./lib/combatants.js";
 import { Sym, ScenSym } from "./components/icons.jsx";
 import { Sheet, Importer, NotesBox, NewScenario } from "./components/party.jsx";
@@ -127,6 +128,13 @@ export function BinderApp({ onRequestMobile }) {
   const [addNpcOpen, setAddNpcOpen] = useState(false);
   const [newScenOpen, setNewScenOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+
+  // Warm the Archives of Nethys name index as soon as the characters tab is
+  // reached, so sheet links are deep links rather than search fallbacks by the
+  // time anything paints. No-op after the first call.
+  useEffect(() => {
+    if (effWorkspace === "characters") loadAonIndex();
+  }, [effWorkspace]);
 
   // Overlay-derived collections (the user's editable state for this scenario).
   const pcs = useMemo(() => (overlay.pcs || []).map((raw) => parseBuild(raw)).filter(Boolean), [overlay.pcs]);

@@ -235,6 +235,15 @@ button{font-family:inherit;}
 .wlink{color:inherit;font-weight:600;text-decoration:none;border-bottom:1px dotted var(--faint);
   transition:border-color .14s;}
 .wlink:hover,.wlink:focus-visible{border-bottom:1px solid var(--ink);outline:none;}
+/* archives of nethys links on the character sheet — same quiet treatment as
+   .wlink but without its 600 weight, which would bold every row of a long
+   feat list. chips already read as tappable, so they get a hover tell only. */
+.alink{color:inherit;text-decoration:none;border-bottom:1px dotted var(--faint);
+  transition:border-color .14s;}
+.alink:hover,.alink:focus-visible{border-bottom:1px solid var(--ink);outline:none;}
+a.chip{text-decoration:none;transition:opacity .14s,border-color .14s;}
+a.chip:hover,a.chip:focus-visible{opacity:.85;outline:none;}
+a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3);}
 .scroll-cue{position:absolute;right:2px;bottom:2px;color:var(--faint);}
 .scroll-cue .pict{width:20px;height:20px;}
 

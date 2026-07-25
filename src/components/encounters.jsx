@@ -11,8 +11,9 @@ import { sign, uid, d20 } from "../lib/pf2e.js";
 import { CONDITIONS, VALUED, conditionEffects, conditionTip, encounterBudget } from "../lib/conditions.js";
 import {
   combatantFromPc, combatantFromNpc, combatantFromCreature,
-  AON_BASE, loadCreatures, cachedCreatures,
+  loadCreatures, cachedCreatures,
 } from "../lib/combatants.js";
+import { AON_BASE } from "../lib/aon.js";
 import { useScenarioData } from "../data/ScenarioContext.jsx";
 import { Sym } from "./icons.jsx";
 

@@ -9,6 +9,8 @@
 import { useState, useRef } from "react";
 import { sign, ABILITIES, parseBuild } from "../lib/pf2e.js";
 import { Sym } from "./icons.jsx";
+import { AonLink } from "./aonlink.jsx";
+import { useAonIndex } from "./useAonIndex.js";
 
 export function Stat({ label, value, sub }) {
   return (
@@ -21,6 +23,10 @@ export function Stat({ label, value, sub }) {
 }
 
 export function Sheet({ pc, section }) {
+  // Only here to re-render the whole sheet once the AoN index lands, which
+  // upgrades every AonLink below from a search fallback to a deep link.
+  useAonIndex();
+
   if (section === "overview")
     return (
       <>
@@ -34,25 +40,25 @@ export function Sheet({ pc, section }) {
 
         <h3 className="sheet-h">identity</h3>
         <dl className="kv">
-          <div><dt>ancestry</dt><dd>{pc.ancestry}{pc.heritage ? ` · ${pc.heritage}` : ""}</dd></div>
-          <div><dt>background</dt><dd>{pc.background || "—"}</dd></div>
-          <div><dt>class</dt><dd>{pc.cls}{pc.dualClass ? ` / ${pc.dualClass}` : ""} {pc.level}</dd></div>
+          <div><dt>ancestry</dt><dd><AonLink kind="ancestry" name={pc.ancestry} />{pc.heritage ? <> · <AonLink kind="heritage" name={pc.heritage} /></> : ""}</dd></div>
+          <div><dt>background</dt><dd>{pc.background ? <AonLink kind="background" name={pc.background} /> : "—"}</dd></div>
+          <div><dt>class</dt><dd><AonLink kind="class" name={pc.cls} />{pc.dualClass ? <> / <AonLink kind="class" name={pc.dualClass} /></> : ""} {pc.level}</dd></div>
           <div><dt>size</dt><dd>{pc.size || "—"}</dd></div>
-          <div><dt>deity</dt><dd>{pc.deity || "—"}</dd></div>
+          <div><dt>deity</dt><dd>{pc.deity ? <AonLink kind="deity" name={pc.deity} /> : "—"}</dd></div>
           <div><dt>alignment</dt><dd>{pc.alignment || "—"}</dd></div>
         </dl>
 
         {pc.languages.length > 0 && (
           <>
             <h3 className="sheet-h">languages</h3>
-            <div className="chips">{pc.languages.map((l) => <span key={l} className="chip">{l}</span>)}</div>
+            <div className="chips">{pc.languages.map((l) => <AonLink key={l} className="chip" kind="language" name={l} />)}</div>
           </>
         )}
 
         {pc.specials.length > 0 && (
           <>
             <h3 className="sheet-h">features</h3>
-            <div className="chips">{pc.specials.map((s) => <span key={s} className="chip ghost">{s}</span>)}</div>
+            <div className="chips">{pc.specials.map((s) => <AonLink key={s} className="chip ghost" kind="classFeature" name={s} cls={pc.cls} />)}</div>
           </>
         )}
       </>
@@ -93,7 +99,7 @@ export function Sheet({ pc, section }) {
         <div className="row-list">
           {pc.skills.map((s) => (
             <div className={`line ${s.prof === 0 ? "untrained" : ""}`} key={s.key}>
-              <span className="line-name">{s.key}</span>
+              <span className="line-name"><AonLink kind="skill" name={s.key} /></span>
               <span className="ab-tag">{s.ab}</span>
               <span className="rank">{s.rank}</span>
               <span className="line-val">{sign(s.total)}</span>
@@ -131,7 +137,7 @@ export function Sheet({ pc, section }) {
           {pc.weapons.length === 0 && <div className="empty-line">no weapons</div>}
           {pc.weapons.map((w, i) => (
             <div className="line wide" key={i}>
-              <span className="line-name">{w.name}</span>
+              <span className="line-name"><AonLink kind="item" name={w.name} /></span>
               <span className="line-val">{w.attack != null ? sign(w.attack) : "—"}</span>
               <span className="dmg">
                 {w.die}
@@ -145,7 +151,7 @@ export function Sheet({ pc, section }) {
         <div className="row-list">
           {pc.armor.map((a, i) => (
             <div className="line" key={i}>
-              <span className="line-name">{a.name}</span>
+              <span className="line-name"><AonLink kind="item" name={a.name} /></span>
               {a.worn && <span className="rank">worn</span>}
               <span className="ab-tag">{a.prof}</span>
             </div>
@@ -158,7 +164,7 @@ export function Sheet({ pc, section }) {
             {pc.familiars.map((f, i) => (
               <div className="companion" key={i}>
                 <div className="companion-name">{f.name}</div>
-                <div className="chips">{f.abilities.map((a) => <span key={a} className="chip ghost">{a}</span>)}</div>
+                <div className="chips">{f.abilities.map((a) => <AonLink key={a} className="chip ghost" kind="familiarAbility" name={a} />)}</div>
               </div>
             ))}
           </>
@@ -166,7 +172,7 @@ export function Sheet({ pc, section }) {
         {pc.pets.length > 0 && (
           <>
             <h3 className="sheet-h">companions</h3>
-            {pc.pets.map((p, i) => <div className="companion" key={i}><div className="companion-name">{p.name}</div></div>)}
+            {pc.pets.map((p, i) => <div className="companion" key={i}><div className="companion-name"><AonLink kind="companion" name={p.name} exact /></div></div>)}
           </>
         )}
       </>
@@ -179,7 +185,7 @@ export function Sheet({ pc, section }) {
         <div className="row-list">
           {pc.feats.map((f, i) => (
             <div className="line wide" key={i}>
-              <span className="line-name">{f.name}</span>
+              <span className="line-name"><AonLink kind="feat" name={f.name} cls={pc.cls} /></span>
               <span className="ab-tag">{f.type.toLowerCase()}</span>
               {f.level && <span className="rank">lvl {f.level}</span>}
             </div>
@@ -207,7 +213,7 @@ export function Sheet({ pc, section }) {
                   {g.level === 0 ? "cantrips" : `rank ${g.level}`}
                   {c.perDay[g.level] > 0 && g.level > 0 && <span className="slots"> · {c.perDay[g.level]} slots</span>}
                 </div>
-                <div className="chips">{g.list.map((s, i) => <span key={i} className="chip">{s}</span>)}</div>
+                <div className="chips">{g.list.map((s, i) => <AonLink key={i} className="chip" kind="spell" name={s} />)}</div>
               </div>
             ))}
             {c.prepared.length > 0 && c.known.length > 0 && (
@@ -216,7 +222,7 @@ export function Sheet({ pc, section }) {
                 {c.known.map((g) => (
                   <div className="spell-tier" key={g.level}>
                     <div className="spell-rank">{g.level === 0 ? "cantrips" : `rank ${g.level}`}</div>
-                    <div className="chips">{g.list.map((s, i) => <span key={i} className="chip ghost">{s}</span>)}</div>
+                    <div className="chips">{g.list.map((s, i) => <AonLink key={i} className="chip ghost" kind="spell" name={s} />)}</div>
                   </div>
                 ))}
               </details>
@@ -234,11 +240,11 @@ export function Sheet({ pc, section }) {
             </div>
             {pc.focus.cantrips.length > 0 && (
               <div className="spell-tier"><div className="spell-rank">focus cantrips</div>
-                <div className="chips">{pc.focus.cantrips.map((s) => <span key={s} className="chip">{s}</span>)}</div></div>
+                <div className="chips">{pc.focus.cantrips.map((s) => <AonLink key={s} className="chip" kind="spell" name={s} />)}</div></div>
             )}
             {pc.focus.spells.length > 0 && (
               <div className="spell-tier"><div className="spell-rank">focus spells</div>
-                <div className="chips">{pc.focus.spells.map((s) => <span key={s} className="chip">{s}</span>)}</div></div>
+                <div className="chips">{pc.focus.spells.map((s) => <AonLink key={s} className="chip" kind="spell" name={s} />)}</div></div>
             )}
           </div>
         )}
@@ -260,7 +266,7 @@ export function Sheet({ pc, section }) {
           {pc.equipment.length === 0 && <div className="empty-line">no items</div>}
           {pc.equipment.map((e, i) => (
             <div className="line" key={i}>
-              <span className="line-name">{e.name}</span>
+              <span className="line-name"><AonLink kind="item" name={e.name} /></span>
               {e.qty > 1 && <span className="rank">×{e.qty}</span>}
             </div>
           ))}
