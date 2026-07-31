@@ -11,9 +11,10 @@
 import { useState, useMemo, useCallback } from "react";
 import "../../mobile.css";
 import { useScenarioData } from "../../data/ScenarioContext.jsx";
-import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters } from "../../lib/combatants.js";
+import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters, orderCombatants } from "../../lib/combatants.js";
 import { uid, d20, parseBuild } from "../../lib/pf2e.js";
 import { makeNoteBlock } from "../../lib/gmnotes-util.js";
+import { useCompanions } from "../useCompanions.js";
 import { haptic } from "./parts/haptic.js";
 import { useSwipe } from "./parts/useSwipe.js";
 import { IconNotes, IconPeople, IconShield } from "./parts/MobileIcons.jsx";
@@ -28,8 +29,6 @@ import { PageJumperSheet } from "./sheets/PageJumperSheet.jsx";
 import { ScenarioPickerSheet } from "./sheets/ScenarioPickerSheet.jsx";
 
 const clamp = (i, len) => (len <= 0 ? 0 : Math.max(0, Math.min(len - 1, i)));
-const sortByInit = (combatants) =>
-  [...combatants].sort((a, b) => (b.init == null ? -Infinity : b.init) - (a.init == null ? -Infinity : a.init));
 
 const TABS = [
   { id: "notes", label: "notes", Icon: IconNotes },
@@ -49,8 +48,11 @@ export default function MobileApp({ onRequestDesktop }) {
   const [activeEncounterId, setActiveEncounterId] = useState(null);
   const [selectedCombatantId, setSelectedCombatantId] = useState(null);
   const [pending, setPending] = useState(8);
-  const [charSel, setCharSel] = useState(null); // null | { kind:"pc"|"npc", id }
+  const [charSel, setCharSel] = useState(null); // null | { kind:"pc"|"npc"|"companion", id }
   const [sheet, setSheet] = useState(null); // null | "jumper" | "scenario" | "note"
+
+  // Re-renders once the companion stat blocks land, filling in their numbers.
+  useCompanions();
 
   // ---- derived data (same sources as the desktop binder) ----
   const pages = useMemo(() => overlay.gmPages || [], [overlay.gmPages]);
@@ -72,7 +74,7 @@ export default function MobileApp({ onRequestDesktop }) {
 
   const encounter =
     encounters.find((e) => e.id === activeEncounterId) || encounters[0] || null;
-  const ordered = useMemo(() => (encounter ? sortByInit(encounter.combatants) : []), [encounter]);
+  const ordered = useMemo(() => (encounter ? orderCombatants(encounter.combatants) : []), [encounter]);
   const activeIdx = encounter ? clamp(encounter.activeIdx ?? 0, ordered.length) : 0;
   const activeTurnId = ordered[activeIdx]?.id ?? null;
   const selected = encounter ? encounter.combatants.find((c) => c.id === selectedCombatantId) || null : null;
@@ -82,9 +84,18 @@ export default function MobileApp({ onRequestDesktop }) {
   // ---- characters ----
   const pcs = useMemo(() => (overlay.pcs || []).map((raw) => parseBuild(raw)).filter(Boolean), [overlay.pcs]);
   const allNpcs = useMemo(() => [...(S?.npcs || []), ...(overlay.customNpcs || [])], [S, overlay.customNpcs]);
+  // A companion's numbers come from its owner's level, so it travels with it.
+  const companions = useMemo(
+    () => pcs.flatMap((p) => p.pets.map((pet, i) => ({ id: `${p.id}::pet${i}`, pet, owner: p }))),
+    [pcs]
+  );
   const openCharacter = useCallback((kind, id) => { setCharSel({ kind, id }); setScreen("charDetail"); }, []);
   const selectedChar = charSel
-    ? (charSel.kind === "pc" ? pcs.find((p) => p.id === charSel.id) : allNpcs.find((n) => n.id === charSel.id)) || null
+    ? (charSel.kind === "pc"
+        ? pcs.find((p) => p.id === charSel.id)
+        : charSel.kind === "companion"
+          ? companions.find((c) => c.id === charSel.id)
+          : allNpcs.find((n) => n.id === charSel.id)) || null
     : null;
 
   // ---- notes ----
@@ -251,7 +262,7 @@ export default function MobileApp({ onRequestDesktop }) {
       />
     );
   } else if (screen === "characters") {
-    body = <CharactersScreen pcs={pcs} npcs={allNpcs} onOpen={openCharacter} />;
+    body = <CharactersScreen pcs={pcs} npcs={allNpcs} companions={companions} onOpen={openCharacter} />;
   } else if (screen === "charDetail") {
     body = <CharacterDetailScreen kind={charSel?.kind} character={selectedChar} onBack={() => setScreen("characters")} />;
   }

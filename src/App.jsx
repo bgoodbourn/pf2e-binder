@@ -52,6 +52,7 @@ const SHEET_NAV = [
   { id: "abilities", label: "abilities", sym: "abilities" },
   { id: "skills", label: "skills & lore", sym: "skills" },
   { id: "combat", label: "combat", sym: "combat" },
+  { id: "companion", label: "companion", sym: "companion" },
   { id: "feats", label: "feats & features", sym: "feats" },
   { id: "spells", label: "spells", sym: "spells" },
   { id: "gear", label: "gear", sym: "gear" },
@@ -249,11 +250,11 @@ export function BinderApp({ onRequestMobile }) {
     [encounters, writeEncounters]
   );
 
-  const openPc = useCallback((pcId) => {
+  const openPc = useCallback((pcId, sect = "overview") => {
     setActivePc(pcId);
     setNpcSel(null);
     setAdding(false);
-    setSection("overview");
+    setSection(sect);
     setWorkspace("characters");
     setNavOpen(false);
   }, []);
@@ -361,6 +362,7 @@ export function BinderApp({ onRequestMobile }) {
   const sheetSections = useMemo(() => {
     const has = (id) => {
       if (id === "spells") return pc && (pc.casters.length || pc.focus);
+      if (id === "companion") return pc && pc.pets.length > 0;
       return true;
     };
     return SHEET_NAV.filter((s) => has(s.id));

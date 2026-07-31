@@ -8,9 +8,12 @@
  * ==================================================================== */
 import { useState, useRef } from "react";
 import { sign, ABILITIES, parseBuild } from "../lib/pf2e.js";
+import { statblockFor } from "../lib/companions.js";
+import { AON_BASE } from "../lib/aon.js";
 import { Sym } from "./icons.jsx";
 import { AonLink } from "./aonlink.jsx";
 import { useAonIndex } from "./useAonIndex.js";
+import { useCompanions } from "./useCompanions.js";
 
 export function Stat({ label, value, sub }) {
   return (
@@ -22,10 +25,176 @@ export function Stat({ label, value, sub }) {
   );
 }
 
+/* ---- animal companions ----
+ * Pathbuilder only tells us the species and how far the companion has been
+ * advanced; statblockFor does the per-level math against the base stat blocks
+ * in companions.json. It returns null until those load (and for a species we
+ * don't have), so both of these degrade to what Pathbuilder gave us. */
+const tierChips = (pet) => [pet.tier, ...pet.specializations, pet.barding?.key !== "none" ? pet.barding.label : null].filter(Boolean);
+
+function CompanionLine({ pet, level }) {
+  const sb = statblockFor(pet, level);
+  return (
+    <div className="companion">
+      <div className="companion-name">
+        {pet.name}
+        {pet.species && <span className="companion-species"> · {pet.tier} {pet.species.toLowerCase()}</span>}
+      </div>
+      {sb && <div className="companion-quick">ac {sb.ac} · hp {sb.hp} · per {sign(sb.perception.total)}</div>}
+    </div>
+  );
+}
+
+function CompanionSheet({ pet, level }) {
+  const sb = statblockFor(pet, level);
+
+  if (!sb)
+    return (
+      <div className="companion-block">
+        <div className="pc-head">
+          <Sym name="companion" className="article-sym" />
+          <div className="pc-head-main">
+            <div className="article-eyebrow">animal companion</div>
+            <h2 className="article-title">{pet.name}</h2>
+            <div className="pc-sub">{pet.tier}{pet.species ? ` ${pet.species.toLowerCase()}` : ""}</div>
+          </div>
+        </div>
+        <div className="chips">{tierChips(pet).map((c) => <span key={c} className="chip ghost">{c}</span>)}</div>
+        <p className="npc-desc">
+          {pet.species ? `No stat block on file for a ${pet.species.toLowerCase()} — ` : "No species recorded — "}
+          <AonLink kind="companion" name={pet.species || pet.name} />
+        </p>
+      </div>
+    );
+
+  return (
+    <div className="companion-block">
+      <div className="pc-head">
+        <Sym name="companion" className="article-sym" />
+        <div className="pc-head-main">
+          <div className="article-eyebrow">animal companion{sb.mount ? " · mount" : ""}</div>
+          <h2 className="article-title">{sb.name}</h2>
+          <div className="pc-sub">
+            <a className="alink" href={AON_BASE + sb.url} target="_blank" rel="noopener noreferrer">
+              {sb.tier} {sb.species.toLowerCase()}
+            </a>{" "}
+            · {sb.size.toLowerCase()} · level {sb.level}
+          </div>
+        </div>
+      </div>
+
+      <div className="chips npc-traits">
+        {sb.traits.map((t) => <span key={t} className="chip ghost">{t.toLowerCase()}</span>)}
+      </div>
+
+      {sb.summary && <p className="npc-desc">{sb.summary}</p>}
+
+      <div className="stat-grid">
+        <Stat label="armor class" value={sb.ac} sub={sb.acNote} />
+        <Stat label="hit points" value={sb.hp} />
+        <Stat label="perception" value={sign(sb.perception.total)} sub={sb.perception.rankName} />
+      </div>
+
+      <h3 className="sheet-h">saving throws</h3>
+      <div className="row-list">
+        {sb.saves.map((s) => (
+          <div className="line" key={s.key}>
+            <span className="line-name">{s.key}</span>
+            <span className="rank">{s.rankName}</span>
+            <span className="line-val">{sign(s.total)}</span>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="sheet-h">abilities</h3>
+      <div className="ability-grid">
+        {ABILITIES.map(([k]) => (
+          <div className="ability" key={k}>
+            <div className="ability-mod">{sign(sb.mods[k])}</div>
+            <div className="ability-name">{k}</div>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="sheet-h">skills</h3>
+      <div className="row-list">
+        {sb.skills.map((s) => (
+          <div className="line" key={s.key}>
+            <span className="line-name"><AonLink kind="skill" name={s.key} /></span>
+            <span className="rank">{s.rankName}</span>
+            <span className="line-val">{sign(s.total)}</span>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="sheet-h">strikes</h3>
+      <div className="row-list">
+        {sb.strikes.map((s, i) => (
+          <div className="line wide" key={i}>
+            <span className="line-name">
+              {s.name}
+              {s.traits.length > 0 && <span className="companion-traits"> ({s.traits.join(", ")})</span>}
+            </span>
+            <span className="line-val">{sign(s.attack)}</span>
+            <span className="dmg">{s.damage} {s.type}</span>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="sheet-h">details</h3>
+      <dl className="kv">
+        <div><dt>speed</dt><dd>{sb.speeds.map((s) => `${s.label === "speed" ? "" : `${s.label} `}${s.value} ft`).join(", ")}</dd></div>
+        {sb.senses && <div><dt>senses</dt><dd>{sb.senses}</dd></div>}
+        <div>
+          <dt>barding</dt>
+          <dd>{sb.barding.label}{sb.checkPenalty ? ` · ${sb.checkPenalty} to Acrobatics, Athletics, Stealth and Thievery` : ""}</dd>
+        </div>
+        {sb.special && <div><dt>special</dt><dd>{sb.special}</dd></div>}
+      </dl>
+
+      {sb.support && (
+        <>
+          <h3 className="sheet-h">support benefit</h3>
+          <p className="sec-p">{sb.support}</p>
+        </>
+      )}
+
+      {sb.advanced && (
+        <>
+          <h3 className="sheet-h">advanced maneuver</h3>
+          <p className="sec-p">
+            <AonLink kind="feat" name={sb.advanced} />
+            {sb.tier === "mature" && <span className="companion-note"> — learned at nimble or savage</span>}
+          </p>
+        </>
+      )}
+
+      {sb.specializations.length > 0 && (
+        <>
+          <h3 className="sheet-h">specialization</h3>
+          {sb.specializations.map((s) => (
+            <div key={s.name} className="companion-spec">
+              <div className="companion-spec-name">
+                {s.url ? (
+                  <a className="alink" href={AON_BASE + s.url} target="_blank" rel="noopener noreferrer">{s.name}</a>
+                ) : s.name}
+                {!s.known && <span className="companion-note"> — effects not applied above</span>}
+              </div>
+              {s.text && <p className="sec-p">{s.text}</p>}
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Sheet({ pc, section }) {
   // Only here to re-render the whole sheet once the AoN index lands, which
   // upgrades every AonLink below from a search fallback to a deep link.
   useAonIndex();
+  // Same idea for the companion stat blocks.
+  useCompanions();
 
   if (section === "overview")
     return (
@@ -163,20 +332,30 @@ export function Sheet({ pc, section }) {
             <h3 className="sheet-h">familiar</h3>
             {pc.familiars.map((f, i) => (
               <div className="companion" key={i}>
-                <div className="companion-name">{f.name}</div>
+                <div className="companion-name">{f.name}{f.species && f.species !== f.name ? <span className="companion-species"> · {f.species}</span> : null}</div>
                 <div className="chips">{f.abilities.map((a) => <AonLink key={a} className="chip ghost" kind="familiarAbility" name={a} />)}</div>
               </div>
             ))}
           </>
         )}
-        {pc.pets.length > 0 && (
+        {(pc.pets.length > 0 || pc.otherPets.length > 0) && (
           <>
             <h3 className="sheet-h">companions</h3>
-            {pc.pets.map((p, i) => <div className="companion" key={i}><div className="companion-name"><AonLink kind="companion" name={p.name} exact /></div></div>)}
+            {pc.pets.map((p, i) => <CompanionLine key={i} pet={p} level={pc.level} />)}
+            {pc.otherPets.map((p, i) => (
+              <div className="companion" key={`o${i}`}><div className="companion-name">{p.name}</div></div>
+            ))}
           </>
         )}
       </>
     );
+
+  if (section === "companion") {
+    // The nav pill only appears for a PC that has one, but the section can
+    // survive a switch to a character that doesn't.
+    if (pc.pets.length === 0) return <div className="empty-line">this character has no animal companion.</div>;
+    return <>{pc.pets.map((p, i) => <CompanionSheet key={i} pet={p} level={pc.level} />)}</>;
+  }
 
   if (section === "feats")
     return (

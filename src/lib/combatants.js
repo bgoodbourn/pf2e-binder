@@ -29,6 +29,35 @@ export function combatantFromPc(pc) {
   };
 }
 
+/* An animal companion acts on its owner's initiative, so its combatant carries
+ * no init of its own — the tracker orders it directly after `ownerPcId` and
+ * hides its initiative cell. `companionId` identifies which of the owner's
+ * companions it is, so the "add player" menu can tell if it's already in. */
+export function combatantFromCompanion(sb, pc, companionId) {
+  const sv = (k) => (sb.saves.find((s) => s.key === k) || {}).total || 0;
+  return {
+    id: uid(),
+    name: sb.name,
+    kind: "companion",
+    level: sb.level,
+    init: null,
+    maxHp: sb.hp,
+    hp: sb.hp,
+    ac: sb.ac,
+    perception: sb.perception.total,
+    fort: sv("fortitude"),
+    ref: sv("reflex"),
+    will: sv("will"),
+    conditions: [],
+    pcId: null,
+    notes: "",
+    ownerPcId: pc.id,
+    companionId,
+    species: sb.species,
+    aonUrl: AON_BASE + sb.url,
+  };
+}
+
 export function combatantFromNpc(npc) {
   return {
     id: uid(),
@@ -48,6 +77,25 @@ export function combatantFromNpc(npc) {
     npcId: npc.id,
     notes: "",
   };
+}
+
+/* Turn order. Everything sorts on initiative as usual, except that an animal
+ * companion is tucked in directly after its owner and takes no slot of its own.
+ * A companion whose owner isn't in this encounter falls back to being an
+ * ordinary combatant on its own initiative. */
+export function orderCombatants(list) {
+  const byInit = (a, b) => (b.init == null ? -Infinity : b.init) - (a.init == null ? -Infinity : a.init);
+  const owners = new Set(list.filter((c) => c.pcId).map((c) => c.pcId));
+  const tucked = list.filter((c) => c.kind === "companion" && owners.has(c.ownerPcId));
+  if (!tucked.length) return [...list].sort(byInit);
+
+  const tuckedIds = new Set(tucked.map((c) => c.id));
+  const out = [];
+  for (const c of [...list].filter((x) => !tuckedIds.has(x.id)).sort(byInit)) {
+    out.push(c);
+    if (c.pcId) out.push(...tucked.filter((t) => t.ownerPcId === c.pcId));
+  }
+  return out;
 }
 
 /* ---- standard creatures (Archives of Nethys data) ----

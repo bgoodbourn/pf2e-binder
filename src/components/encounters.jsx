@@ -10,12 +10,14 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { sign, uid, d20 } from "../lib/pf2e.js";
 import { CONDITIONS, VALUED, conditionEffects, conditionTip, encounterBudget } from "../lib/conditions.js";
 import {
-  combatantFromPc, combatantFromNpc, combatantFromCreature,
-  loadCreatures, cachedCreatures,
+  combatantFromPc, combatantFromNpc, combatantFromCreature, combatantFromCompanion,
+  orderCombatants, loadCreatures, cachedCreatures,
 } from "../lib/combatants.js";
+import { statblockFor } from "../lib/companions.js";
 import { AON_BASE } from "../lib/aon.js";
 import { useScenarioData } from "../data/ScenarioContext.jsx";
 import { Sym } from "./icons.jsx";
+import { useCompanions } from "./useCompanions.js";
 
 /* ---- Add Combatant modal (custom ally / enemy) ---- */
 function AddCombatant({ onAdd, onClose }) {
@@ -218,8 +220,11 @@ function AutoTextarea({ value, onChange, className, placeholder, ariaLabel, onKe
   );
 }
 
-/* ---- a single combatant row ---- */
-function CombatantRow({ c, onPatch, onRemove, onOpenPc, onOpenNpc, onAddCondition }) {
+/* ---- a single combatant row ----
+ * `tucked` is set for an animal companion whose owner is in this encounter: it
+ * sits under the owner, acts on the owner's initiative, and so has no
+ * initiative cell of its own. Everything else about the row is unchanged. */
+function CombatantRow({ c, tucked, onPatch, onRemove, onOpenPc, onOpenNpc, onAddCondition }) {
   const [roll, setRoll] = useState(null); // ephemeral save-roll readout (not persisted)
   const [editing, setEditing] = useState(false); // stat-edit mode (roll vs edit, one at a time)
   const fx = conditionEffects(c);
@@ -238,30 +243,36 @@ function CombatantRow({ c, onPatch, onRemove, onOpenPc, onOpenNpc, onAddConditio
   const fumble = roll && roll.die === 1;
   const rollCol = crit ? "#3f7d52" : fumble ? "#b4544a" : "#111";
   return (
-    <div className={`cbt kind-${c.kind}`}>
-      <div className="cbt-init">
-        <input
-          type="number"
-          className="init-inp"
-          value={c.init == null ? "" : c.init}
-          placeholder="—"
-          onChange={(e) => onPatch({ init: e.target.value === "" ? null : Number(e.target.value) })}
-          aria-label="initiative"
-        />
+    <div className={`cbt kind-${c.kind}${tucked ? " tucked" : ""}`}>
+      {!tucked && (
+        <div className="cbt-init">
+          <input
+            type="number"
+            className="init-inp"
+            value={c.init == null ? "" : c.init}
+            placeholder="—"
+            onChange={(e) => onPatch({ init: e.target.value === "" ? null : Number(e.target.value) })}
+            aria-label="initiative"
+          />
+        </div>
+      )}
+      <div className="cbt-avatar">
+        <Sym name={c.kind === "enemy" ? "combat" : c.kind === "companion" ? "companion" : "party"} className="cbt-sym" />
       </div>
-      <div className="cbt-avatar"><Sym name={c.kind === "enemy" ? "combat" : "party"} className="cbt-sym" /></div>
       <div className="cbt-main">
         <div className="cbt-name-row">
           <span className="cbt-name">{c.name}</span>
           {c.pcId ? (
             <button className="cbt-link" title="open character sheet" onClick={() => onOpenPc(c.pcId)}>↗</button>
+          ) : c.ownerPcId ? (
+            <button className="cbt-link" title="open companion stat block" onClick={() => onOpenPc(c.ownerPcId, "companion")}>↗</button>
           ) : c.npcId ? (
             <button className="cbt-link" title="open npc sheet" onClick={() => onOpenNpc(c.npcId)}>↗</button>
           ) : c.aonUrl ? (
             <a className="cbt-link" href={c.aonUrl} target="_blank" rel="noopener noreferrer" title="open in Archives of Nethys">↗</a>
           ) : null}
           <span className={`cbt-kind k-${c.kind}`}>{c.kind}</span>
-          <span className="cbt-level">lvl {c.level}</span>
+          <span className="cbt-level">{c.species ? `${c.species.toLowerCase()} · ` : ""}lvl {c.level}</span>
           {c.kind !== "pc" && (
             <button
               className={`cbt-edit${editing ? " on" : ""}`}
@@ -368,6 +379,9 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   const [npcMenu, setNpcMenu] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [mapUrl, setMapUrl] = useState("");
+  // Re-renders once the companion stat blocks land, so the party's companions
+  // can be offered in the "add player" menu with their derived numbers.
+  useCompanions();
 
   if (!encounter) {
     return (
@@ -405,14 +419,22 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   const rollInitiative = () =>
     setCombatants((cs) => cs.map((c) => (c.kind === "pc" ? c : { ...c, init: d20() + (c.perception || 0) })));
 
-  const ordered = [...encounter.combatants].sort((a, b) => {
-    const av = a.init == null ? -Infinity : a.init;
-    const bv = b.init == null ? -Infinity : b.init;
-    return bv - av;
-  });
+  const ordered = orderCombatants(encounter.combatants);
 
   const inEncounter = new Set(encounter.combatants.map((c) => c.pcId).filter(Boolean));
   const availablePcs = pcs.filter((p) => !inEncounter.has(p.id));
+  // Companions the party has that aren't in this encounter yet, each with its
+  // derived stat block (null until companions.json loads, which the hook waits on).
+  const inCompanion = new Set(encounter.combatants.map((c) => c.companionId).filter(Boolean));
+  const availableCompanions = pcs.flatMap((p) =>
+    p.pets
+      .map((pet, i) => ({ pc: p, pet, companionId: `${p.id}::pet${i}`, sb: statblockFor(pet, p.level) }))
+      .filter((x) => x.sb && !inCompanion.has(x.companionId))
+  );
+  // A companion is tucked under its owner only when the owner is in the fight.
+  const tuckedIds = new Set(
+    encounter.combatants.filter((c) => c.kind === "companion" && inEncounter.has(c.ownerPcId)).map((c) => c.id)
+  );
   const inNpc = new Set(encounter.combatants.map((c) => c.npcId).filter(Boolean));
   const allNpcs = [...(scenario?.npcs || []), ...(overlay?.customNpcs || [])];
   const availableNpcs = allNpcs.filter(
@@ -484,14 +506,27 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
         </button>
 
         <div className="tb-wrap">
-          <button className="tb tb-add" disabled={availablePcs.length === 0} onClick={() => setPlayerMenu((v) => !v)}>
+          <button
+            className="tb tb-add"
+            disabled={availablePcs.length + availableCompanions.length === 0}
+            onClick={() => setPlayerMenu((v) => !v)}
+          >
             <span className="tb-chip" aria-hidden>+</span> add player
           </button>
-          {playerMenu && availablePcs.length > 0 && (
+          {playerMenu && availablePcs.length + availableCompanions.length > 0 && (
             <div className="menu" onMouseLeave={() => setPlayerMenu(false)}>
               {availablePcs.map((p) => (
                 <button key={p.id} className="menu-item" onClick={() => { addCombatant(combatantFromPc(p)); setPlayerMenu(false); }}>
                   {p.name}<span className="menu-sub">{p.cls} {p.level}</span>
+                </button>
+              ))}
+              {availableCompanions.map((x) => (
+                <button
+                  key={x.companionId}
+                  className="menu-item sub"
+                  onClick={() => { addCombatant(combatantFromCompanion(x.sb, x.pc, x.companionId)); setPlayerMenu(false); }}
+                >
+                  {x.sb.name}<span className="menu-sub">{x.pc.name}’s {x.sb.species.toLowerCase()}</span>
                 </button>
               ))}
             </div>
@@ -547,6 +582,7 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
             <CombatantRow
               key={c.id}
               c={c}
+              tucked={tuckedIds.has(c.id)}
               onPatch={(p) => patch(c.id, p)}
               onRemove={() => removeCombatant(c.id)}
               onOpenPc={onOpenPc}

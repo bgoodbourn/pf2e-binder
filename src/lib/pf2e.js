@@ -6,6 +6,8 @@
  *  and a couple of tiny RNG/id utilities.
  * ==================================================================== */
 
+import { parsePet } from "./companions.js";
+
 /* ----------------------------- PF2e math --------------------------- */
 const amod = (s) => Math.floor((Number(s || 10) - 10) / 2);
 export const sign = (n) => (n >= 0 ? `+${n}` : `${n}`);
@@ -21,7 +23,7 @@ export const ABILITIES = [
   ["cha", "charisma"],
 ];
 
-const SKILLS = [
+export const SKILLS = [
   ["acrobatics", "dex"],
   ["arcana", "int"],
   ["athletics", "str"],
@@ -164,11 +166,20 @@ export function parseBuild(input) {
   const equipment = (b.equipment || []).map((e) => ({ name: e[0], qty: Number(e[1] || 1) }));
   const money = b.money || {};
 
-  const familiars = (b.familiars || []).map((f) => ({
-    name: f.name || f.type,
-    abilities: f.abilities || [],
-  }));
-  const pets = (b.pets || []).map((p) => ({ name: p.name || p.type || "companion" }));
+  // Pathbuilder puts animal companions AND familiars in `pets` and leaves
+  // `familiars` empty, so split on the entry's own type rather than trusting
+  // which list it arrived in.
+  const parsedPets = (b.pets || []).map(parsePet);
+  const familiars = [
+    ...(b.familiars || []).map((f) => ({
+      name: f.name || f.type,
+      species: f.specific || null,
+      abilities: f.abilities || [],
+    })),
+    ...parsedPets.filter((p) => p.kind === "familiar"),
+  ];
+  const pets = parsedPets.filter((p) => p.kind === "companion");
+  const otherPets = parsedPets.filter((p) => p.kind === "other");
 
   return {
     id: `${b.name}-${b.class}-${level}`.toLowerCase().replace(/\s+/g, "-"),
@@ -206,6 +217,7 @@ export function parseBuild(input) {
     money,
     familiars,
     pets,
+    otherPets,
     raw,
   };
 }

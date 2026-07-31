@@ -53,6 +53,12 @@ export function Sym({ name, className }) {
           <path d="M20 3l13 5v9c0 9-5.6 15-13 20C12.6 32 7 26 7 17V8z" />
         </svg>
       );
+    case "companion": // rhombus — a companion at its owner's side
+      return (
+        <svg {...p}>
+          <path d="M20 4l12 16-12 16L8 20z" />
+        </svg>
+      );
     case "gmnotes":
       return (
         <svg {...p}>

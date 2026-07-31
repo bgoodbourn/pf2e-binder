@@ -11,7 +11,7 @@ const FILTERS = [
 
 function Row({ r, onOpen }) {
   return (
-    <button className="m-cast-row" style={{ borderLeftColor: r.accent }} onClick={() => onOpen(r.kind, r.id)}>
+    <button className={`m-cast-row${r.tucked ? " tucked" : ""}`} style={{ borderLeftColor: r.accent }} onClick={() => onOpen(r.kind, r.id)}>
       <span className="m-cast-tile" style={{ color: r.accent }}>{r.initials}</span>
       <span className="m-cast-main">
         <span className="m-cast-name">{r.name}</span>
@@ -23,11 +23,19 @@ function Row({ r, onOpen }) {
   );
 }
 
-export function CharactersScreen({ pcs, npcs, onOpen }) {
+export function CharactersScreen({ pcs, npcs, companions, onOpen }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
 
-  const partyRows = useMemo(() => pcs.map((p) => characterRow("pc", p)), [pcs]);
+  // Each PC is followed by its own companions, tucked under it.
+  const partyRows = useMemo(
+    () =>
+      pcs.flatMap((p) => [
+        characterRow("pc", p),
+        ...(companions || []).filter((c) => c.owner.id === p.id).map((c) => characterRow("companion", c)),
+      ]),
+    [pcs, companions]
+  );
   const npcRows = useMemo(() => npcs.map((n) => characterRow("npc", n)), [npcs]);
 
   const ql = q.trim().toLowerCase();

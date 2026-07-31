@@ -75,6 +75,13 @@ export function CharacterDetailScreen({ kind, character, onBack }) {
           </div>
         )}
 
+        {d.details.length > 0 && (
+          <div className="m-card m-cd-lines">
+            <div className="m-section-label">details</div>
+            {d.details.map((s, i) => <div key={i} className="m-cd-line">{s}</div>)}
+          </div>
+        )}
+
         {d.spells.length > 0 && (
           <Collapsible title="spells & reactions">
             {d.spells.map((s, i) => <div key={i} className="m-cd-line">{s}</div>)}

@@ -184,6 +184,17 @@ button{font-family:inherit;}
 /* companions */
 .companion{background:var(--hush);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
 .companion-name{font-family:'Inter Tight',sans-serif;font-weight:600;font-size:15px;color:var(--ink);margin-bottom:9px;text-transform:lowercase;}
+.companion-name:last-child{margin-bottom:0;}
+.companion-species{font-weight:400;color:var(--ink-3);}
+.companion-quick{font-size:12px;color:var(--ink-3);text-transform:lowercase;}
+/* the full stat block on the companion section */
+.companion-block{padding-bottom:8px;}
+.companion-block + .companion-block{margin-top:32px;padding-top:28px;border-top:1px solid var(--line);}
+.companion-block .pc-head{margin-bottom:16px;}
+.companion-traits{font-size:12px;color:var(--faint);text-transform:lowercase;}
+.companion-note{font-size:12px;color:var(--faint);text-transform:lowercase;}
+.companion-spec{margin-bottom:14px;}
+.companion-spec-name{font-family:'Inter Tight',sans-serif;font-weight:600;font-size:14px;color:var(--ink);margin-bottom:6px;text-transform:lowercase;}
 
 /* casters */
 .caster{border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:16px;}
@@ -471,6 +482,9 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
   cursor:pointer;padding:9px 11px;border-radius:9px;font-size:14px;color:var(--ink);text-align:left;text-transform:lowercase;}
 .menu-item:hover{background:var(--hush);}
 .menu-sub{font-size:11.5px;color:var(--faint);}
+.menu-item.sub{position:relative;padding-left:22px;}
+.menu-item.sub::before{content:"";position:absolute;left:12px;top:50%;width:5px;height:5px;margin-top:-2.5px;
+  border-radius:1px;background:var(--accent);transform:rotate(45deg);}
 
 /* themed add buttons (add player / add npc) — quiet pill + accent chip */
 .tb-add{color:var(--ink);}
@@ -542,6 +556,12 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .cbt.kind-enemy{border-left:3px solid var(--ink);}
 .cbt.kind-ally{border-left:3px solid var(--line);}
 .cbt.kind-pc{border-left:3px solid var(--faint);}
+/* an animal companion, tucked under the character it belongs to: indented,
+   no initiative cell (it acts on its owner's turn), companion accent */
+.cbt.kind-companion{border-left:3px solid var(--accent);}
+.cbt.kind-companion.tucked{margin-left:56px;margin-top:-2px;background:#fdfaf8;}
+.cbt.kind-companion .cbt-avatar{background:var(--accent-tint);}
+.cbt.kind-companion .cbt-sym{color:var(--accent);}
 .cbt-init{flex:0 0 54px;}
 .init-inp{width:54px;height:46px;text-align:center;font-family:'Inter Tight',sans-serif;font-weight:700;font-size:19px;
   color:var(--ink);background:var(--hush);border:1px solid var(--line);border-radius:11px;outline:none;}
@@ -557,6 +577,7 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .cbt-kind.k-enemy{background:var(--pill);color:var(--pill-text);}
 .cbt-kind.k-ally{background:var(--hush);color:var(--ink-2);}
 .cbt-kind.k-pc{background:transparent;color:var(--faint);border:1px solid var(--line);}
+.cbt-kind.k-companion{background:var(--accent-tint);color:var(--accent-dark);}
 .cbt-level{font-size:11.5px;color:var(--faint);text-transform:lowercase;}
 /* condition-effect stat tiles + save rolling */
 .cbt-tiles{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px;}
