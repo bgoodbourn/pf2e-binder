@@ -8,7 +8,9 @@
  * ==================================================================== */
 import { useState, useEffect, useMemo, useRef } from "react";
 import { sign, uid, d20 } from "../lib/pf2e.js";
-import { CONDITIONS, VALUED, conditionEffects, conditionTip, encounterBudget } from "../lib/conditions.js";
+import {
+  CONDITIONS, VALUED, conditionEffects, conditionTip, effectTip, roundsUnchanged, encounterBudget,
+} from "../lib/conditions.js";
 import {
   combatantFromPc, combatantFromNpc, combatantFromCreature, combatantFromCompanion,
   orderCombatants, loadCreatures, cachedCreatures,
@@ -32,7 +34,7 @@ function AddCombatant({ onAdd, onClose }) {
       id: uid(), name: f.name.trim(), kind, level: Number(f.level),
       init: null, maxHp: num(f.maxHp), hp: num(f.maxHp), ac: num(f.ac),
       perception: num(f.perception), fort: num(f.fort), ref: num(f.ref), will: num(f.will),
-      conditions: [], pcId: null, notes: f.notes.trim(),
+      conditions: [], effects: [], pcId: null, notes: f.notes.trim(),
     });
     onClose();
   };
@@ -162,14 +164,48 @@ function CreaturePalette({ onAdd, onClose, onBuildCustom }) {
   );
 }
 
+/* ---- shared bits for the two "apply to N combatants" modals ---- */
+
+/* The row of targets a modal is about to write to. Dropping a chip removes that
+ * target without leaving the modal, so a mis-tick in select mode costs nothing. */
+function ApplyBand({ targets, onDrop }) {
+  return (
+    <div className="apply-band">
+      <span className="apply-band-label">applying to</span>
+      {targets.map((t) => (
+        <span key={t.id} className="cond">
+          {t.name}
+          <button className="cond-x" onClick={() => onDrop(t.id)} aria-label={`don't apply to ${t.name}`}>×</button>
+        </span>
+      ))}
+      {targets.length === 0 && <span className="apply-band-empty">no targets left</span>}
+    </div>
+  );
+}
+
+/* One dot per round the chip has held its current state, capped at three plus a
+ * "+" so a six-round-old chip and a ten-round-old one read the same — both are
+ * long overdue a look. Nothing renders for the round it was set in. */
+function AgeDots({ n }) {
+  if (n == null || n < 1) return null;
+  const dots = Math.min(n, 3);
+  return (
+    <span className="cond-age" aria-label={`unchanged for ${n} round${n === 1 ? "" : "s"}`}>
+      {Array.from({ length: dots }, (_, i) => <span key={i} className="cond-age-dot" />)}
+      {n > 3 && <span className="cond-age-more">+</span>}
+    </span>
+  );
+}
+
 /* ---- Condition picker ---- */
-function ConditionPicker({ onPick, onClose }) {
+function ConditionPicker({ targets, onDropTarget, onPick, onClose }) {
   const [q, setQ] = useState("");
   const [level, setLevel] = useState("");
   const [sel, setSel] = useState(null);
   const list = CONDITIONS.filter((c) => c.toLowerCase().includes(q.toLowerCase()));
+  const many = targets.length > 1;
   const add = () => {
-    if (!sel) return;
+    if (!sel || !targets.length) return;
     onPick(sel, level === "" ? null : Number(level));
     onClose();
   };
@@ -181,6 +217,7 @@ function ConditionPicker({ onPick, onClose }) {
           <a className="modal-ref" href="https://2e.aonprd.com/Conditions.aspx" target="_blank" rel="noopener noreferrer">reference ↗</a>
           <button className="modal-x" onClick={onClose} aria-label="close">×</button>
         </div>
+        <ApplyBand targets={targets} onDrop={onDropTarget} />
         <input className="inp" placeholder="search conditions" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
         <div className="cond-list">
           {list.map((c) => (
@@ -192,7 +229,122 @@ function ConditionPicker({ onPick, onClose }) {
         </div>
         <div className="cond-foot">
           <label className="field"><span>level (optional)</span><input className="inp" type="number" placeholder="e.g. 1" value={level} onChange={(e) => setLevel(e.target.value)} /></label>
-          <button className="btn" disabled={!sel} onClick={add}>apply{sel ? ` ${sel.toLowerCase()}` : ""}</button>
+          <button className="btn" disabled={!sel || !targets.length} onClick={add}>
+            apply{sel ? ` ${sel.toLowerCase()}` : ""}{many ? ` to ${targets.length}` : ""}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Custom effect modal ----
+ * A GM-authored, named effect with arbitrary modifiers, for the many spells that
+ * impose condition-like penalties the rules never named. Eight fixed lines cover
+ * what's on the sheet; anything else the GM types becomes an off-sheet pill. */
+const FX_LINES = [
+  { target: "ac", label: "ac" },
+  { target: "fort", label: "fortitude" },
+  { target: "ref", label: "reflex" },
+  { target: "will", label: "will" },
+  { target: "per", label: "perception" },
+  { target: "attack", label: "attack" },
+  { target: "damage", label: "damage" },
+  { target: "actions", label: "actions" },
+];
+const FX_CLAMP = 6;
+
+function FxStep({ v, onSet }) {
+  return (
+    <span className="fx-step">
+      <button onClick={() => onSet(Math.max(-FX_CLAMP, v - 1))} aria-label="decrease">−</button>
+      <button className="fx-val" title="reset to 0" onClick={() => onSet(0)}>{v > 0 ? `+${v}` : v}</button>
+      <button onClick={() => onSet(Math.min(FX_CLAMP, v + 1))} aria-label="increase">+</button>
+    </span>
+  );
+}
+
+function CustomEffectModal({ targets, onDropTarget, onApply, onClose }) {
+  const [name, setName] = useState("");
+  const [fixed, setFixed] = useState(() => FX_LINES.map(() => 0));
+  const [custom, setCustom] = useState([]); // { id, label, v }
+  const [focusId, setFocusId] = useState(null); // custom line to focus once mounted
+
+  const setFixedAt = (i, v) => setFixed((cur) => cur.map((x, k) => (k === i ? v : x)));
+  const setCustomAt = (id, p) => setCustom((cur) => cur.map((c) => (c.id === id ? { ...c, ...p } : c)));
+  const addCustom = () => {
+    const line = { id: uid(), label: "", v: 0 };
+    setCustom((cur) => [...cur, line]);
+    setFocusId(line.id);
+  };
+
+  // Zero lines are dropped, and a custom line with no label has nothing to modify.
+  const mods = [
+    ...FX_LINES.map((l, i) => ({ target: l.target, v: fixed[i] })),
+    ...custom.map((c) => ({ target: c.label.trim(), v: c.v })),
+  ].filter((m) => m.v !== 0 && m.target);
+  const anySet = fixed.some((v) => v !== 0) || custom.some((c) => c.v !== 0);
+  const valid = name.trim() !== "" && mods.length > 0 && targets.length > 0;
+  const many = targets.length > 1;
+
+  const submit = () => {
+    if (!valid) return;
+    onApply(name.trim(), mods);
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card narrow" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h3 className="modal-title">custom effect</h3>
+          <button className="modal-x" onClick={onClose} aria-label="close">×</button>
+        </div>
+        <ApplyBand targets={targets} onDrop={onDropTarget} />
+        <label className="field"><span>name</span>
+          <input className="inp" placeholder="e.g. bane" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        </label>
+        <div className="fx-lines">
+          {FX_LINES.map((l, i) => (
+            <div key={l.target} className={`fx-line${fixed[i] !== 0 ? " on" : ""}`}>
+              <span className="fx-line-label">{l.label}</span>
+              <FxStep v={fixed[i]} onSet={(v) => setFixedAt(i, v)} />
+            </div>
+          ))}
+          {custom.map((c) => (
+            <div key={c.id} className={`fx-line${c.v !== 0 ? " on" : ""}`}>
+              <input
+                className="fx-line-custom"
+                placeholder="what does it affect…"
+                value={c.label}
+                ref={(el) => { if (el && focusId === c.id) { el.focus(); setFocusId(null); } }}
+                onChange={(e) => setCustomAt(c.id, { label: e.target.value })}
+                aria-label="effect target"
+              />
+              <FxStep v={c.v} onSet={(v) => setCustomAt(c.id, { v })} />
+              <button className="fx-line-x" onClick={() => setCustom((cur) => cur.filter((x) => x.id !== c.id))} aria-label="remove line">×</button>
+            </div>
+          ))}
+          <button className="fx-add" onClick={addCustom}>+ add new</button>
+        </div>
+        <div className="fx-preview">
+          {!name.trim() && !anySet && <span className="fx-preview-empty">nothing set yet</span>}
+          {(name.trim() || anySet) && (
+            <>
+              <span className="cond"><span className="cond-fx-dot" aria-hidden />{name.trim() || "unnamed"}</span>
+              {mods.map((m, i) => (
+                <span key={`${m.target}-${i}`} className={`cbt-offpill${m.v > 0 ? " up" : ""}`}>
+                  {m.target} <strong>{sign(m.v)}</strong>
+                </span>
+              ))}
+            </>
+          )}
+        </div>
+        <div className="modal-foot">
+          <button className="mini" onClick={onClose}>cancel</button>
+          <button className="btn" disabled={!valid} onClick={submit}>
+            apply{name.trim() ? ` ${name.trim().toLowerCase()}` : ""}{many ? ` to ${targets.length}` : ""}
+          </button>
         </div>
       </div>
     </div>
@@ -224,10 +376,39 @@ function AutoTextarea({ value, onChange, className, placeholder, ariaLabel, onKe
  * `tucked` is set for an animal companion whose owner is in this encounter: it
  * sits under the owner, acts on the owner's initiative, and so has no
  * initiative cell of its own. Everything else about the row is unchanged. */
-function CombatantRow({ c, tucked, onPatch, onRemove, onOpenPc, onOpenNpc, onAddCondition }) {
+function CombatantRow({
+  c, tucked, index, round, compact, selected,
+  onPatch, onRemove, onOpenPc, onOpenNpc, onAddCondition, onAddEffect, onToggleSelect,
+}) {
   const [roll, setRoll] = useState(null); // ephemeral save-roll readout (not persisted)
   const [editing, setEditing] = useState(false); // stat-edit mode (roll vs edit, one at a time)
+  const [stepping, setStepping] = useState(null); // condition id whose value stepper is open
   const fx = conditionEffects(c);
+
+  // the stepper is a transient editor: escape closes it, and so does going compact
+  const stepId = compact ? null : stepping; // going compact closes the editor
+  useEffect(() => {
+    if (!stepping) return;
+    const onKey = (e) => { if (e.key === "Escape") setStepping(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [stepping]);
+
+  const removeCond = (id) => onPatch((cur) => ({ conditions: cur.conditions.filter((x) => x.id !== id) }));
+  /* A value change re-stamps sinceRound: the age marker tracks how long the
+   * condition has held THIS value, so stepping frightened 2 down to 1 starts the
+   * count again rather than carrying the older reading across. */
+  const setCondValue = (id, v) => {
+    if (v < 1) { removeCond(id); setStepping(null); return; }
+    onPatch((cur) => ({
+      conditions: cur.conditions.map((x) => (x.id === id ? { ...x, value: Math.min(10, v), sinceRound: round } : x)),
+    }));
+  };
+  const removeEffect = (id) => onPatch((cur) => ({ effects: (cur.effects || []).filter((x) => x.id !== id) }));
+
+  const chipCount = c.conditions.length + (c.effects || []).length;
+  const summary = chipCount === 0 ? "clear" : `${chipCount} condition${chipCount === 1 ? "" : "s"}`;
+  const stop = (e) => e.stopPropagation();
   const rollSave = (save) => {
     const die = d20();
     setRoll({ save, die, bonus: fx.adjusted[save], total: die + fx.adjusted[save] });
@@ -243,9 +424,21 @@ function CombatantRow({ c, tucked, onPatch, onRemove, onOpenPc, onOpenNpc, onAdd
   const fumble = roll && roll.die === 1;
   const rollCol = crit ? "#3f7d52" : fumble ? "#b4544a" : "#111";
   return (
-    <div className={`cbt kind-${c.kind}${tucked ? " tucked" : ""}`}>
+    <div
+      className={`cbt kind-${c.kind}${tucked ? " tucked" : ""}${compact ? " compact" : ""}${selected ? " sel" : ""}`}
+      style={{ "--i": Math.min(index, 7) }}
+      onClick={compact ? onToggleSelect : undefined}
+    >
+      <span className="cbt-check">
+        <button
+          className={selected ? "on" : ""}
+          onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
+          aria-label={`${selected ? "deselect" : "select"} ${c.name}`}
+          tabIndex={compact ? 0 : -1}
+        >{selected ? "✓" : ""}</button>
+      </span>
       {!tucked && (
-        <div className="cbt-init">
+        <div className="cbt-init" onClick={stop}>
           <input
             type="number"
             className="init-inp"
@@ -282,7 +475,9 @@ function CombatantRow({ c, tucked, onPatch, onRemove, onOpenPc, onOpenNpc, onAdd
               {editing ? "✓ done" : "✎ edit"}
             </button>
           )}
+          <span className="cbt-summary">{summary}</span>
         </div>
+        <div className="cbt-detail">
         {editing ? (
           <div className="cbt-editgrid">
             {[["ac", "ac"], ["maxHp", "total hp"], ["fort", "fort"], ["ref", "ref"], ["will", "will"], ["perception", "per"]].map(([k, label]) => (
@@ -341,20 +536,59 @@ function CombatantRow({ c, tucked, onPatch, onRemove, onOpenPc, onOpenNpc, onAdd
           </div>
         )}
         <div className="cbt-conds">
-          {c.conditions.map((cond) => (
-            <span key={cond.id} className="cond" title={conditionTip(cond)}>
-              {cond.name}{cond.value != null ? ` ${cond.value}` : ""}
-              <button className="cond-x" onClick={() => onPatch((cur) => ({ conditions: cur.conditions.filter((x) => x.id !== cond.id) }))} aria-label="remove condition">×</button>
-            </span>
-          ))}
+          {c.conditions.map((cond) => {
+            const n = roundsUnchanged(cond, round);
+            const valued = VALUED.has(cond.name);
+            const open = stepId === cond.id;
+            const v = cond.value == null ? 1 : cond.value;
+            return (
+              <span key={cond.id} className={`cond${open ? " editing" : ""}`} title={conditionTip(cond, n)}>
+                <button
+                  className={`cond-name${valued ? " valued" : ""}`}
+                  onClick={(e) => { e.stopPropagation(); if (valued) setStepping(open ? null : cond.id); }}
+                >
+                  {open ? cond.name : `${cond.name}${cond.value != null ? ` ${cond.value}` : ""}`}
+                </button>
+                <AgeDots n={n} />
+                {open && (
+                  <>
+                    <span className="cond-step">
+                      <button
+                        className={v <= 1 ? "warn" : ""}
+                        title={v <= 1 ? "remove condition" : "decrease"}
+                        onClick={() => setCondValue(cond.id, v - 1)}
+                      >−</button>
+                      <span className="cond-val">{v}</span>
+                      <button title="increase" onClick={() => setCondValue(cond.id, v + 1)}>+</button>
+                    </span>
+                    <button className="cond-done" title="done" onClick={() => setStepping(null)}>✓</button>
+                  </>
+                )}
+                <button className="cond-x" onClick={() => removeCond(cond.id)} aria-label="remove condition">×</button>
+              </span>
+            );
+          })}
+          {(c.effects || []).map((e) => {
+            const n = roundsUnchanged(e, round);
+            return (
+              <span key={e.id} className="cond" title={effectTip(e, n)}>
+                <span className="cond-fx-dot" aria-hidden />
+                {e.name}
+                <AgeDots n={n} />
+                <button className="cond-x" onClick={() => removeEffect(e.id)} aria-label="remove effect">×</button>
+              </span>
+            );
+          })}
           <button className="cond-add" onClick={onAddCondition}>+ condition</button>
+          <button className="cond-add fx" onClick={onAddEffect}>+ effect</button>
         </div>
         <div className="cbt-noterow">
           <span className="cbt-note-label">note</span>
           <AutoTextarea className="cbt-note-input" value={c.notes} onChange={(v) => onPatch({ notes: v })} placeholder="add a note…" ariaLabel="combatant note" />
         </div>
+        </div>
       </div>
-      <div className="cbt-hp">
+      <div className="cbt-hp" onClick={stop}>
         <input
           type="number"
           className="hp-inp"
@@ -365,7 +599,7 @@ function CombatantRow({ c, tucked, onPatch, onRemove, onOpenPc, onOpenNpc, onAdd
         <span className="hp-sep">/</span>
         <span className="hp-max">{c.maxHp}</span>
       </div>
-      <button className="cbt-x" onClick={onRemove} aria-label="remove combatant">×</button>
+      <button className="cbt-x" onClick={(e) => { e.stopPropagation(); onRemove(); }} aria-label="remove combatant">×</button>
     </div>
   );
 }
@@ -374,7 +608,13 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   const { scenario, overlay } = useScenarioData();
   const [addOpen, setAddOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // Which combatants a modal is about to write to. An array so the same modal
+  // serves both the per-row shortcut and a multi-combatant apply.
   const [condFor, setCondFor] = useState(null);
+  const [fxFor, setFxFor] = useState(null);
+  // Select mode is ephemeral — deliberately never persisted to the overlay.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState([]);
   const [playerMenu, setPlayerMenu] = useState(false);
   const [npcMenu, setNpcMenu] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
@@ -382,6 +622,16 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   // Re-renders once the companion stat blocks land, so the party's companions
   // can be offered in the "add player" menu with their derived numbers.
   useCompanions();
+
+  // Switching encounters drops the selection (React's adjust-state-on-prop-change
+  // pattern — an effect here would render the stale selection for a frame first).
+  const encounterId = encounter && encounter.id;
+  const [seenEncounter, setSeenEncounter] = useState(encounterId);
+  if (seenEncounter !== encounterId) {
+    setSeenEncounter(encounterId);
+    setSelectMode(false);
+    setSelected([]);
+  }
 
   if (!encounter) {
     return (
@@ -404,6 +654,38 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   const patch = (id, p) => setCombatants((cs) => cs.map((c) => (c.id === id ? { ...c, ...(typeof p === "function" ? p(c) : p) } : c)));
   const addCombatant = (c) => setCombatants((cs) => [...cs, c]);
   const removeCombatant = (id) => setCombatants((cs) => cs.filter((c) => c.id !== id));
+
+  const toggleSelected = (id) =>
+    setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  const exitSelect = () => { setSelectMode(false); setSelected([]); };
+
+  /* Both applies write every target in ONE patch so the whole action is a single
+   * undo, and read the round once up front — they were all applied in the same
+   * round, so they must all carry the same stamp. */
+  const applyCondition = (ids, name, value) => {
+    const r = encounter.round ?? 1;
+    setCombatants((cs) => cs.map((c) => {
+      if (!ids.includes(c.id)) return c;
+      const conds = c.conditions || [];
+      // Re-applying a condition a combatant already has updates it rather than
+      // stacking a second chip — and only re-stamps if the value actually moved.
+      if (conds.some((x) => x.name === name)) {
+        return { ...c, conditions: conds.map((x) => (x.name === name
+          ? { ...x, value, sinceRound: x.value === value ? x.sinceRound : r }
+          : x)) };
+      }
+      return { ...c, conditions: [...conds, { id: uid(), name, value, sinceRound: r }] };
+    }));
+    exitSelect();
+  };
+
+  const applyEffect = (ids, name, mods) => {
+    const r = encounter.round ?? 1;
+    setCombatants((cs) => cs.map((c) => (ids.includes(c.id)
+      ? { ...c, effects: [...(c.effects || []), { id: uid(), name, mods, sinceRound: r }] }
+      : c)));
+    exitSelect();
+  };
 
   // round bar + running sheet (round/log default tolerantly on read)
   const round = encounter.round ?? 1;
@@ -440,6 +722,10 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   const availableNpcs = allNpcs.filter(
     (n) => n.ac != null && n.hp != null && n.perception != null && !inNpc.has(n.id)
   );
+  const byId = (ids) => (ids || []).map((id) => encounter.combatants.find((c) => c.id === id)).filter(Boolean);
+  const condTargets = byId(condFor);
+  const fxTargets = byId(fxFor);
+
   const budget = encounterBudget(encounter.combatants, pcs);
   // The threat pill auto-computes, but a GM can override either field; once set,
   // the override sticks (and drives the pill's colour). `?? ` keeps a 0 override.
@@ -555,6 +841,13 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
           <button className="tb-split-sec" onClick={() => setAddOpen(true)}>add custom</button>
         </div>
 
+        <button
+          className={`tb sel-toggle${selectMode ? " on" : ""}`}
+          onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+        >
+          <span className="sel-box" aria-hidden /> select
+        </button>
+
         <button className={`tb ${mapOpen ? "on" : ""}`} onClick={() => setMapOpen((v) => !v)}>map</button>
         <button className="tb danger-tb" onClick={() => setCombatants(() => [])}>clear</button>
       </div>
@@ -575,19 +868,44 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
         </div>
       )}
 
+      {/* always mounted so it can animate open and shut */}
+      <div className={`sel-bar-wrap${selectMode ? " on" : ""}`}>
+        <div className="sel-bar">
+          <span className="sel-readout">
+            <span className="sel-count">{selected.length}</span>
+            <span className="sel-label">selected</span>
+          </span>
+          <span className="sel-div" />
+          <button className="sel-quick" onClick={() => setSelected(encounter.combatants.map((c) => c.id))}>all</button>
+          <button className="sel-quick" onClick={() => setSelected(encounter.combatants.filter((c) => c.kind === "enemy").map((c) => c.id))}>enemies</button>
+          <button className="sel-quick" onClick={() => setSelected(encounter.combatants.filter((c) => c.kind === "pc" || c.kind === "companion").map((c) => c.id))}>pcs</button>
+          <span className="sel-actions">
+            <button className="sel-act" disabled={!selected.length} onClick={() => setCondFor(selected)}>+ condition</button>
+            <button className="sel-act fx" disabled={!selected.length} onClick={() => setFxFor(selected)}>+ effect</button>
+            <button className="sel-x" onClick={exitSelect} aria-label="leave select mode">×</button>
+          </span>
+        </div>
+      </div>
+
       <div className="enc-body">
-        <div className="cbt-list">
+        <div className={`cbt-list${selectMode ? " compact" : ""}`}>
           {ordered.length === 0 && <div className="cbt-empty">no combatants yet — add players or creatures above.</div>}
-          {ordered.map((c) => (
+          {ordered.map((c, i) => (
             <CombatantRow
               key={c.id}
               c={c}
               tucked={tuckedIds.has(c.id)}
+              index={i}
+              round={round}
+              compact={selectMode}
+              selected={selected.includes(c.id)}
+              onToggleSelect={() => toggleSelected(c.id)}
               onPatch={(p) => patch(c.id, p)}
               onRemove={() => removeCombatant(c.id)}
               onOpenPc={onOpenPc}
               onOpenNpc={onOpenNpc}
-              onAddCondition={() => setCondFor(c.id)}
+              onAddCondition={() => setCondFor([c.id])}
+              onAddEffect={() => setFxFor([c.id])}
             />
           ))}
         </div>
@@ -631,8 +949,18 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
       {addOpen && <AddCombatant onAdd={addCombatant} onClose={() => setAddOpen(false)} />}
       {condFor && (
         <ConditionPicker
-          onPick={(name, value) => patch(condFor, (cur) => ({ conditions: [...cur.conditions, { id: uid(), name, value }] }))}
+          targets={condTargets}
+          onDropTarget={(id) => setCondFor((cur) => cur.filter((x) => x !== id))}
+          onPick={(name, value) => applyCondition(condFor, name, value)}
           onClose={() => setCondFor(null)}
+        />
+      )}
+      {fxFor && (
+        <CustomEffectModal
+          targets={fxTargets}
+          onDropTarget={(id) => setFxFor((cur) => cur.filter((x) => x !== id))}
+          onApply={(name, mods) => applyEffect(fxFor, name, mods)}
+          onClose={() => setFxFor(null)}
         />
       )}
     </article>

@@ -143,6 +143,12 @@ export function conditionEffects(c) {
     const n = cond.value != null ? cond.value : 1;
     def.fx(n, c).forEach((x) => contribs.push(x));
   });
+  // GM-authored custom effects. Untyped on purpose: a hand-written effect has no
+  // declared PF2e bonus type, so it must sum with everything rather than compete
+  // with status/circumstance penalties — which is exactly what stackDelta does.
+  (c.effects || []).forEach((e) => {
+    (e.mods || []).forEach((m) => contribs.push({ target: m.target, v: m.v, type: "untyped" }));
+  });
   const adjusted = { ...base };
   const deltas = {};
   ON_SHEET.forEach((stat) => {
@@ -164,11 +170,42 @@ export function conditionEffects(c) {
   return { base, adjusted, deltas, offSheet };
 }
 
-// Tooltip text for a condition chip: its mechanical summary.
-export function conditionTip(cond) {
+/* ---- chip age ----
+ * Conditions and custom effects carry `sinceRound`: the round their CURRENT
+ * state began. Stepping frightened 2 down to frightened 1 re-stamps it, so the
+ * marker answers "how long has it been frightened 1", not "how long has it been
+ * frightened at all". Legacy chips (saved before the field existed) have no
+ * stamp and read as null — they render no marker rather than a false full one.
+ *
+ * Floors at 0 so the round bar's back / reset buttons make the marker fade out
+ * instead of going negative. Those buttons deliberately do NOT re-stamp:
+ * stepping back should look like stepping back. */
+export function roundsUnchanged(item, round) {
+  if (!item || item.sinceRound == null) return null;
+  return Math.max(0, (round ?? 1) - item.sinceRound);
+}
+
+function ageLine(item, n) {
+  if (n == null) return "";
+  if (n === 0) return "applied this round";
+  return `unchanged for ${n} round${n === 1 ? "" : "s"} · since round ${item.sinceRound}`;
+}
+
+// Tooltip text for a condition chip: how long it's held, then its mechanics.
+export function conditionTip(cond, n) {
   const def = CONDITION_FX[cond.name];
-  const base = def ? def.desc : "";
-  return cond.value != null ? `${cond.name} ${cond.value} — ${base}` : base;
+  const desc = def ? def.desc : "";
+  const base = cond.value != null ? `${cond.name} ${cond.value} — ${desc}` : desc;
+  const age = ageLine(cond, n);
+  return age ? `${age}\n${base}` : base;
+}
+
+// Tooltip for a custom effect chip: its modifiers, spelled out.
+export function effectTip(e, n) {
+  const parts = (e.mods || []).map((m) => `${m.target} ${m.v > 0 ? "+" : "−"}${Math.abs(m.v)}`);
+  const base = parts.length ? `${e.name} — ${parts.join(", ")}` : e.name;
+  const age = ageLine(e, n);
+  return age ? `${age}\n${base}` : base;
 }
 
 // XP budgeting (party of 4 thresholds, adjusted per extra/fewer PC)

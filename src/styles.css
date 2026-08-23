@@ -475,6 +475,42 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .tb.roll:hover{background:#faf9f7;border-color:var(--ink-3);color:var(--ink);}
 .danger-tb{margin-left:auto;}
 .danger-tb:hover{border-color:#b23b3b;color:#b23b3b;}
+
+/* ----- select mode (apply one condition / effect to many) ----- */
+.sel-toggle .sel-box{width:11px;height:11px;border-radius:3px;border:1.5px solid #b4b3ad;background:transparent;}
+.sel-toggle.on{background:var(--pill);border-color:var(--pill);color:var(--pill-text);}
+.sel-toggle.on .sel-box{background:var(--pill-text);border-color:var(--pill-text);}
+/* Always mounted so it can animate. Spacing below the bar lives on .sel-bar, not
+   the wrapper, so it collapses with the clipped box — .enc-scroll is a plain
+   block container, so there's no flex gap to cancel with a negative margin. */
+.sel-bar-wrap{overflow:hidden;max-height:0;opacity:0;transform:translateY(-8px);
+  transition:max-height .3s cubic-bezier(.4,0,.2,1),opacity .22s ease,
+             transform .3s cubic-bezier(.4,0,.2,1);}
+.sel-bar-wrap.on{max-height:120px;opacity:1;transform:none;}
+/* borrows .round-bar's #141414 so it reads as the same class of thing:
+   a temporary mode banner, not a piece of the list */
+.sel-bar{background:#141414;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  margin-bottom:14px;}
+.sel-readout{display:flex;align-items:baseline;gap:8px;}
+.sel-count{font-family:'Inter Tight',sans-serif;font-weight:700;font-size:22px;color:#fff;line-height:1;}
+.sel-label{font-size:11px;letter-spacing:.06em;text-transform:lowercase;color:#8a8a86;}
+.sel-div{width:1px;height:22px;background:#333;}
+.sel-quick{border:1px solid #333;background:transparent;border-radius:8px;padding:5px 10px;
+  font-size:11.5px;color:#bdbcb5;text-transform:lowercase;cursor:pointer;font-family:inherit;}
+.sel-quick:hover{border-color:#666;color:#fff;}
+.sel-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.sel-act{border:0;border-radius:10px;padding:8px 14px;font-size:12.5px;text-transform:lowercase;cursor:pointer;
+  background:var(--pill-text);color:var(--ink);font-family:inherit;}
+.sel-act.fx{background:#b4544a;color:#fff;}
+.sel-act:disabled{opacity:.42;cursor:not-allowed;}
+.sel-x{border:0;background:transparent;color:#8a8a86;font-size:16px;line-height:1;padding:0 2px;cursor:pointer;}
+.sel-x:hover{color:#fff;}
+
+/* the row of targets a modal is about to write to */
+.apply-band{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#faf9f7;
+  border:1px solid var(--line-2);border-radius:12px;padding:9px 12px;margin-bottom:16px;}
+.apply-band-label{font-size:11.5px;color:var(--ink-3);text-transform:lowercase;}
+.apply-band-empty{font-size:11.5px;color:#b4b3ad;text-transform:lowercase;}
 .tb-wrap{position:relative;}
 .menu{position:absolute;top:calc(100% + 6px);left:0;z-index:30;min-width:190px;background:var(--panel);
   border:1px solid var(--line);border-radius:13px;box-shadow:0 18px 40px -22px rgba(17,17,17,.4);padding:6px;}
@@ -550,9 +586,11 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .enc-map-ctrl .inp{flex:1;min-width:160px;}
 .filebtn{cursor:pointer;}
 
-.cbt-list{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;}
+.cbt-list{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;transition:gap .3s cubic-bezier(.4,0,.2,1);}
+.cbt-list.compact{gap:4px;}
 .cbt-empty{color:var(--faint);font-size:13.5px;text-transform:lowercase;padding:18px 2px;}
-.cbt{display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--panel);}
+.cbt{display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--panel);
+  transition:padding .3s cubic-bezier(.4,0,.2,1),border-radius .3s ease,border-color .2s ease;}
 .cbt.kind-enemy{border-left:3px solid var(--ink);}
 .cbt.kind-ally{border-left:3px solid var(--line);}
 .cbt.kind-pc{border-left:3px solid var(--faint);}
@@ -616,13 +654,46 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .cbt-roll-x:hover{color:#b4544a;}
 .cbt-conds{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center;}
 .cond{cursor:default;}
-.cond{display:inline-flex;align-items:center;gap:5px;background:var(--hush);border-radius:999px;padding:3px 6px 3px 10px;
-  font-size:11.5px;color:var(--ink);text-transform:lowercase;}
+/* the transparent border is load-bearing: opening the value stepper swaps it for
+   a visible one, and without it here the chip would jump 1px when it does */
+.cond{display:inline-flex;align-items:center;gap:5px;background:var(--hush);border:1px solid transparent;border-radius:999px;
+  padding:3px 6px 3px 10px;font-size:11.5px;color:var(--ink);text-transform:lowercase;
+  transition:background .16s ease,border-color .16s ease,padding .16s ease;}
 .cond-x{border:0;background:transparent;cursor:pointer;color:var(--ink-3);font-size:13px;line-height:1;padding:0 2px;}
 .cond-x:hover{color:#b23b3b;}
 .cond-add{border:1px dashed var(--line);background:transparent;border-radius:999px;padding:3px 10px;font-size:11px;
   color:var(--ink-3);cursor:pointer;text-transform:lowercase;transition:border-color .14s,color .14s;}
 .cond-add:hover{border-color:var(--ink-3);color:var(--ink);}
+
+/* one dot per round the chip has held its current value; three max, then a "+".
+   #b0afa8 matches .cbt-diemark — a shade below --faint, which is what keeps the
+   marker underneath the stat numbers in the hierarchy */
+.cond-age{display:inline-flex;align-items:center;gap:2.5px;pointer-events:none;}
+.cond-age-dot{width:3px;height:3px;border-radius:50%;background:#b0afa8;}
+.cond-age-more{font-size:9px;line-height:1;color:#b0afa8;margin-left:.5px;}
+
+/* custom (GM-authored) effect: a hollow ring tells it apart from a rules
+   condition at a glance, without a second chip colour */
+.cond-fx-dot{width:5px;height:5px;border-radius:50%;border:1.4px solid #b4544a;flex:0 0 5px;}
+.cond-add.fx{border-color:#d8cdc9;color:#b4544a;}
+.cond-add.fx:hover{border-color:#b4544a;color:#98453c;}
+
+/* inline value stepper — valued chips get no resting affordance, they just
+   become an editor when clicked */
+.cond.editing{background:var(--panel);border-color:#ddd;padding:2px 5px 2px 10px;
+  box-shadow:0 2px 8px -4px rgba(17,17,17,.35);}
+.cond-name{border:0;background:transparent;padding:0;margin:0;font:inherit;color:inherit;
+  text-transform:inherit;cursor:default;}
+.cond-name.valued{cursor:pointer;}
+.cond-step{display:inline-flex;align-items:center;border:1px solid #ddd;border-radius:999px;
+  background:var(--panel);overflow:hidden;}
+.cond-step button{width:21px;height:20px;border:0;background:transparent;cursor:pointer;
+  font-size:13px;line-height:1;color:var(--ink-2);padding:0;}
+.cond-step button.warn{color:#b4544a;}
+.cond-step .cond-val{min-width:17px;text-align:center;font-family:'Inter Tight',sans-serif;font-weight:700;
+  font-size:12px;color:var(--ink);border-left:1px solid var(--line-2);border-right:1px solid var(--line-2);
+  line-height:20px;}
+.cond-done{border:0;background:transparent;cursor:pointer;color:var(--ink-2);font-size:11px;line-height:1;padding:0 1px;}
 .cbt-hp{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-top:3px;}
 .hp-inp{width:58px;height:40px;text-align:center;font-family:'Inter Tight',sans-serif;font-weight:600;font-size:16px;
   color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;outline:none;}
@@ -631,6 +702,52 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .hp-max{font-family:'Inter Tight',sans-serif;font-weight:600;font-size:16px;color:var(--ink-3);min-width:26px;}
 .cbt-x{border:0;background:transparent;cursor:pointer;color:var(--faint);font-size:18px;line-height:1;padding:2px 4px;margin-top:6px;}
 .cbt-x:hover{color:#b23b3b;}
+
+/* ----- select mode: the row collapses to one line -----
+   The point of select mode is the condensing, not the checkboxes: five expanded
+   rows are ~660px and condensed ~230px, and the gap grows with party size. One
+   shared .3s cubic-bezier(.4,0,.2,1) across every property so the whole thing
+   reads as a single move rather than six animations. */
+.cbt.compact{align-items:center;padding:7px 12px;border-radius:11px;cursor:pointer;}
+.cbt.sel{border-color:var(--ink);}
+.cbt-check{flex:0 0 auto;width:0;margin-right:0;margin-top:6px;opacity:0;overflow:hidden;
+  transition:width .28s cubic-bezier(.4,0,.2,1),margin-right .28s cubic-bezier(.4,0,.2,1),opacity .2s ease;}
+.cbt.compact .cbt-check{width:17px;margin-right:12px;margin-top:0;opacity:1;}
+.cbt-check button{width:17px;height:17px;border-radius:5px;background:transparent;border:1.5px solid #d8d7d2;
+  color:#fff;font-size:11px;line-height:1;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;padding:0;transition:background .16s ease,border-color .16s ease;}
+.cbt-check button.on{background:var(--pill);border-color:var(--pill);}
+/* Always rendered so it can animate both ways, but an opacity-0 element still
+   takes its width — left in flow it squeezes the expanded name row and wraps the
+   edit button onto a second line. max-width collapses it to nothing instead, and
+   unlike width:auto it transitions. */
+.cbt-summary{font-size:11.5px;color:#b4b3ad;text-transform:lowercase;opacity:0;
+  margin-left:auto;flex:0 1 auto;white-space:nowrap;max-width:0;overflow:hidden;
+  transition:opacity .24s ease,max-width .3s cubic-bezier(.4,0,.2,1);}
+.cbt.compact .cbt-summary{opacity:1;max-width:170px;}
+/* the compact row must stay ONE line — that's the whole point of the mode, and a
+   wrapped row costs back most of the height the collapse just saved. The stat-edit
+   toggle goes with it: the grid it opens lives in the collapsed detail. */
+.cbt.compact .cbt-name-row{flex-wrap:nowrap;align-items:center;min-width:0;}
+.cbt.compact .cbt-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cbt.compact .cbt-kind,.cbt.compact .cbt-level{white-space:nowrap;flex:0 0 auto;}
+.cbt.compact .cbt-edit{display:none;}
+/* overflow is VISIBLE when expanded — the value stepper lifts out of the chip and
+   would be clipped otherwise; it only flips to hidden while collapsing, which is
+   exactly when the clipping is wanted. visibility is in the transition so the
+   detail stays visible for the duration and only then goes untabbable. */
+.cbt-detail{overflow:visible;max-height:620px;opacity:1;visibility:visible;
+  transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .2s ease,visibility .32s,
+             transform .32s cubic-bezier(.4,0,.2,1);transition-delay:calc(var(--i,0) * 16ms);}
+.cbt.compact .cbt-detail{overflow:hidden;max-height:0;opacity:0;visibility:hidden;
+  pointer-events:none;transform:translateY(-6px);}
+.cbt.compact .cbt-avatar,.cbt.compact .cbt-x{margin-top:0;}
+.init-inp{transition:width .3s cubic-bezier(.4,0,.2,1),height .3s cubic-bezier(.4,0,.2,1),
+  font-size .3s ease,border-radius .3s ease;}
+.cbt.compact .cbt-init{flex:0 0 34px;}
+.cbt.compact .init-inp{width:34px;height:26px;font-size:14px;border-radius:8px;}
+.hp-inp{transition:height .3s cubic-bezier(.4,0,.2,1);}
+.cbt.compact .hp-inp{height:26px;}
 
 /* ----- modals ----- */
 .modal-overlay{position:fixed;inset:0;z-index:60;background:rgba(17,17,17,.34);backdrop-filter:blur(2px);
@@ -671,6 +788,37 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .cond-valued{font-size:9px;opacity:.6;letter-spacing:.04em;}
 .cond-foot{display:flex;gap:12px;align-items:flex-end;}
 .cond-foot .field{flex:1;}
+
+/* ----- custom effect modal -----
+   A flat list of lines; the only thing distinguishing them is whether they're
+   set. No grouping, no headers, no current-value column. */
+.fx-lines{display:flex;flex-direction:column;gap:3px;margin-top:14px;}
+.fx-line{display:flex;align-items:center;gap:10px;padding:4px 10px;border-radius:10px;background:#faf9f7;}
+.fx-line.on{background:#f7ebe9;}
+.fx-line-label{flex:1;font-size:12.5px;color:var(--ink-2);text-transform:lowercase;}
+.fx-line.on .fx-line-label{color:var(--ink);}
+.fx-line-custom{flex:1;min-width:0;border:0;border-bottom:1px solid var(--line);background:transparent;
+  font:inherit;font-size:12.5px;color:var(--ink);padding:1px 0;outline:none;}
+.fx-line.on .fx-line-custom{border-bottom-color:#e0cbc7;}
+.fx-step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:9px;
+  background:var(--panel);overflow:hidden;}
+.fx-line.on .fx-step{border-color:#e0cbc7;}
+.fx-step button{width:26px;height:26px;border:0;background:transparent;cursor:pointer;
+  font-size:14px;line-height:1;color:#b4b3ad;padding:0;font-family:inherit;}
+.fx-step .fx-val{width:34px;text-align:center;font-family:'Inter Tight',sans-serif;font-weight:700;
+  font-size:13px;color:#c9c8c2;border:0;border-left:1px solid var(--line-2);border-right:1px solid var(--line-2);
+  line-height:26px;background:transparent;cursor:pointer;height:26px;}
+.fx-line.on .fx-step button,.fx-line.on .fx-step .fx-val{color:#b4544a;}
+.fx-line.on .fx-step .fx-val{border-left-color:#f0e0dd;border-right-color:#f0e0dd;}
+.fx-line-x{border:0;background:transparent;cursor:pointer;font-size:14px;color:#b4b3ad;line-height:1;padding:0 2px;}
+.fx-line-x:hover{color:#b4544a;}
+.fx-add{border:1px dashed var(--line);background:transparent;border-radius:10px;padding:7px 11px;
+  font-size:11.5px;color:var(--ink-3);text-transform:lowercase;cursor:pointer;text-align:left;margin-top:3px;
+  font-family:inherit;}
+.fx-add:hover{border-color:var(--ink-3);color:var(--ink);}
+.fx-preview{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:26px;}
+.fx-preview-empty{font-size:11.5px;color:#b4b3ad;text-transform:lowercase;}
 
 @media (max-width:880px){
   .shell{height:auto;min-height:100vh;}

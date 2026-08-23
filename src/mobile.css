@@ -238,6 +238,15 @@
 .m-app .m-cond-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px 6px 11px; border-radius: 999px; background: var(--m-fill); font-size: 12.5px; user-select: none; }
 .m-app .m-cond-chip.valued { background: var(--m-fill3); }
 .m-app .m-cond-updown { color: var(--m-muted); font-size: 11px; }
+/* how long the chip has held its current value — one dot per round, three max
+   then a "+". pointer-events:none keeps them clear of the drag-to-set gesture. */
+.m-app .cond-age { display: inline-flex; align-items: center; gap: 2.5px; pointer-events: none; }
+.m-app .cond-age-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--m-muted); }
+.m-app .cond-age-more { font-size: 9px; line-height: 1; color: var(--m-muted); margin-left: .5px; }
+/* GM-authored custom effect (created on desktop): a hollow ring tells it apart
+   from a rules condition without a second chip colour */
+.m-app .cond-fx-dot { width: 5px; height: 5px; border-radius: 50%; border: 1.4px solid #b4544a; flex: 0 0 5px; }
+.m-app .m-cond-fx { color: var(--m-ink); }
 .m-app .m-cond-x { width: 18px; height: 18px; border-radius: 999px; display: grid; place-items: center; color: var(--m-muted); }
 .m-app .m-cond-add { display: inline-flex; align-items: center; gap: 4px; padding: 6px 11px; border-radius: 999px; border: 1px dashed var(--m-line); color: var(--m-ink3); font-size: 12px; }
 .m-app .m-condmenu { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: var(--m-fill2); border-radius: 12px; animation: m-popIn .17s ease; transform-origin: top center; max-height: 220px; overflow-y: auto; }

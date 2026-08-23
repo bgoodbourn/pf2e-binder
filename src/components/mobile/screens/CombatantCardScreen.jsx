@@ -22,10 +22,14 @@ export function CombatantCardScreen({ combatant: c, round, pending, setPending, 
   };
   const addCond = (name) => {
     if (c.conditions.some((x) => x.name === name)) return;
-    onPatch({ conditions: [...c.conditions, { id: uid(), name, value: VALUED.has(name) ? 1 : null }] });
+    onPatch({ conditions: [...c.conditions, { id: uid(), name, value: VALUED.has(name) ? 1 : null, sinceRound: round }] });
   };
   const removeCond = (id) => onPatch({ conditions: c.conditions.filter((x) => x.id !== id) });
-  const setCondVal = (id, value) => onPatch({ conditions: c.conditions.map((x) => (x.id === id ? { ...x, value } : x)) });
+  /* Re-stamps sinceRound: the age dots count how long the condition has held
+   * THIS value, so dragging frightened 2 down to 1 starts the count again. */
+  const setCondVal = (id, value) =>
+    onPatch({ conditions: c.conditions.map((x) => (x.id === id ? { ...x, value, sinceRound: round } : x)) });
+  const removeEffect = (id) => onPatch({ effects: (c.effects || []).filter((x) => x.id !== id) });
 
   return (
     <div className="m-screen m-combatant">
@@ -58,7 +62,15 @@ export function CombatantCardScreen({ combatant: c, round, pending, setPending, 
 
         <div className="m-conds-card">
           <div className="m-section-label">conditions</div>
-          <ConditionChips conditions={c.conditions} onAdd={addCond} onRemove={removeCond} onSetValue={setCondVal} />
+          <ConditionChips
+            conditions={c.conditions}
+            effects={c.effects || []}
+            round={round}
+            onAdd={addCond}
+            onRemove={removeCond}
+            onSetValue={setCondVal}
+            onRemoveEffect={removeEffect}
+          />
         </div>
 
         {c.notes && (

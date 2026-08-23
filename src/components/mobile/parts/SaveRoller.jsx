@@ -10,12 +10,18 @@ import { haptic } from "./haptic.js";
 // on each condition in isolation (no duplicate FX table). Gives an honest
 // reason string like "frightened −1, off-guard −2".
 function contributors(c, stat) {
-  return (c.conditions || [])
-    .map((cond) => {
-      const d = conditionEffects({ ...c, conditions: [cond] }).deltas[stat] || 0;
-      return d < 0 ? `${cond.name.toLowerCase()} ${sign(d)}` : null;
-    })
-    .filter(Boolean);
+  // Each source is run alone — note the empty sibling array in every spread:
+  // leaving the effects in while isolating a condition would fold every effect's
+  // delta into every condition's reason string.
+  const conds = (c.conditions || []).map((cond) => {
+    const d = conditionEffects({ ...c, conditions: [cond], effects: [] }).deltas[stat] || 0;
+    return d < 0 ? `${cond.name.toLowerCase()} ${sign(d)}` : null;
+  });
+  const fx = (c.effects || []).map((e) => {
+    const d = conditionEffects({ ...c, conditions: [], effects: [e] }).deltas[stat] || 0;
+    return d < 0 ? `${e.name.toLowerCase()} ${sign(d)}` : null;
+  });
+  return [...conds, ...fx].filter(Boolean);
 }
 
 const SAVES = [

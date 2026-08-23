@@ -15,10 +15,13 @@ function Row({ c, active, onSelect }) {
       <span className="m-init-main">
         <span className="m-init-name">{c.name} <SidePill c={c} /></span>
         <HpBar hp={c.hp} max={c.maxHp} />
-        {c.conditions?.length > 0 && (
+        {(c.conditions?.length > 0 || c.effects?.length > 0) && (
           <span className="m-init-conds">
-            {c.conditions.map((cd) => (
+            {c.conditions?.map((cd) => (
               <span key={cd.id} className="m-cond-mini">{cd.name}{cd.value != null ? ` ${cd.value}` : ""}</span>
+            ))}
+            {c.effects?.map((e) => (
+              <span key={e.id} className="m-cond-mini m-cond-fx">{e.name}</span>
             ))}
           </span>
         )}
