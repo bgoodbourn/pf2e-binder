@@ -183,6 +183,21 @@ function ApplyBand({ targets, onDrop }) {
   );
 }
 
+/* Who applied this — optional, and it does real work: it decides which round the
+ * age clock starts on (see startRoundFor). Everyone in the fight is offered,
+ * including the target, since applying something to yourself is ordinary. */
+function AppliedByField({ combatants, value, onChange }) {
+  return (
+    <label className="field applied-by">
+      <span>applied by (optional)</span>
+      <select className="inp" value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">— not recorded —</option>
+        {combatants.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+    </label>
+  );
+}
+
 /* One dot per round the chip has held its current state, capped at three plus a
  * "+" so a six-round-old chip and a ten-round-old one read the same — both are
  * long overdue a look. Nothing renders for the round it was set in. */
@@ -198,15 +213,16 @@ function AgeDots({ n }) {
 }
 
 /* ---- Condition picker ---- */
-function ConditionPicker({ targets, onDropTarget, onPick, onClose }) {
+function ConditionPicker({ targets, combatants, onDropTarget, onPick, onClose }) {
   const [q, setQ] = useState("");
   const [level, setLevel] = useState("");
   const [sel, setSel] = useState(null);
+  const [by, setBy] = useState("");
   const list = CONDITIONS.filter((c) => c.toLowerCase().includes(q.toLowerCase()));
   const many = targets.length > 1;
   const add = () => {
     if (!sel || !targets.length) return;
-    onPick(sel, level === "" ? null : Number(level));
+    onPick(sel, level === "" ? null : Number(level), by);
     onClose();
   };
   return (
@@ -218,7 +234,8 @@ function ConditionPicker({ targets, onDropTarget, onPick, onClose }) {
           <button className="modal-x" onClick={onClose} aria-label="close">×</button>
         </div>
         <ApplyBand targets={targets} onDrop={onDropTarget} />
-        <input className="inp" placeholder="search conditions" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+        <AppliedByField combatants={combatants} value={by} onChange={setBy} />
+        <input className="inp cond-search" placeholder="search conditions" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
         <div className="cond-list">
           {list.map((c) => (
             <button key={c} className={`cond-opt ${sel === c ? "on" : ""}`} onClick={() => setSel(c)}>
@@ -272,8 +289,9 @@ function FxStep({ v, onSet }) {
   );
 }
 
-function CustomEffectModal({ targets, onDropTarget, onApply, onClose }) {
+function CustomEffectModal({ targets, combatants, onDropTarget, onApply, onClose }) {
   const [name, setName] = useState("");
+  const [by, setBy] = useState("");
   const [fixed, setFixed] = useState(() => FX_LINES.map(() => 0));
   const [custom, setCustom] = useState([]); // { id, label, v }
   const [focusId, setFocusId] = useState(null); // custom line to focus once mounted
@@ -299,7 +317,7 @@ function CustomEffectModal({ targets, onDropTarget, onApply, onClose }) {
 
   const submit = () => {
     if (!valid) return;
-    onApply(name.trim(), mods);
+    onApply(name.trim(), mods, by);
     onClose();
   };
 
@@ -311,6 +329,7 @@ function CustomEffectModal({ targets, onDropTarget, onApply, onClose }) {
           <button className="modal-x" onClick={onClose} aria-label="close">×</button>
         </div>
         <ApplyBand targets={targets} onDrop={onDropTarget} />
+        <AppliedByField combatants={combatants} value={by} onChange={setBy} />
         <label className="field"><span>name</span>
           <input className="inp" placeholder="e.g. bane" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         </label>
@@ -407,7 +426,10 @@ function CombatantRow({
   const removeCond = (id) => onPatch((cur) => ({ conditions: cur.conditions.filter((x) => x.id !== id) }));
   /* A value change re-stamps sinceRound: the age marker tracks how long the
    * condition has held THIS value, so stepping frightened 2 down to 1 starts the
-   * count again rather than carrying the older reading across. */
+   * count again rather than carrying the older reading across. The clock restarts
+   * from now with no turn-order offset — you adjusting a chip isn't the applier
+   * acting again — but `appliedRound` and `appliedBy` ride along untouched, so
+   * the tooltip still says where the condition came from. */
   const setCondValue = (id, v) => {
     if (v < 1) { removeCond(id); setStepping(null); return; }
     onPatch((cur) => ({
@@ -679,30 +701,58 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   const quickPick = (ids) => setSelected(sameSet(ids) ? [] : ids);
   const exitSelect = () => { setSelectMode(false); setSelected([]); };
 
+  /* Which round a chip's age clock starts on, resolved once here and stored —
+   * the age is really "how many of the TARGET's turns have passed", and that
+   * depends on where the applier sits in the turn order.
+   *
+   * Initiative A 20, B 18, C 16; B applies sickened to A and C in round 1.
+   * C acts after B, so C still gets a turn in round 1 and the clock starts
+   * there — by round 2 it reads 1. A already acted before B did, so A's first
+   * turn under the condition is round 2 and the clock starts there — round 2
+   * reads 0, round 3 reads 1. A self-apply lands on your own turn, so it counts
+   * like the applier being "not before you": the clock starts next round.
+   *
+   * Resolved at apply time rather than derived live, so re-rolling initiative
+   * mid-fight doesn't silently re-age everything already on the board. */
+  const startRoundFor = (targetId, byId, r) => {
+    if (!byId) return r;
+    const iBy = ordered.findIndex((c) => c.id === byId);
+    const iTarget = ordered.findIndex((c) => c.id === targetId);
+    if (iBy === -1 || iTarget === -1) return r;
+    return iBy < iTarget ? r : r + 1;
+  };
+
   /* Both applies write every target in ONE patch so the whole action is a single
    * undo, and read the round once up front — they were all applied in the same
-   * round, so they must all carry the same stamp. */
-  const applyCondition = (ids, name, value) => {
+   * round, even where the turn order gives them different start rounds. */
+  const applyCondition = (ids, name, value, byId) => {
     const r = encounter.round ?? 1;
+    const byName = byId ? (encounter.combatants.find((c) => c.id === byId) || {}).name : null;
     setCombatants((cs) => cs.map((c) => {
       if (!ids.includes(c.id)) return c;
       const conds = c.conditions || [];
+      const stamp = { sinceRound: startRoundFor(c.id, byId, r), appliedRound: r, appliedBy: byName || null };
       // Re-applying a condition a combatant already has updates it rather than
-      // stacking a second chip — and only re-stamps if the value actually moved.
+      // stacking a second chip. An unchanged value is a no-op re-application, so
+      // it keeps the clock it already had rather than restarting on nothing.
       if (conds.some((x) => x.name === name)) {
         return { ...c, conditions: conds.map((x) => (x.name === name
-          ? { ...x, value, sinceRound: x.value === value ? x.sinceRound : r }
+          ? (x.value === value ? x : { ...x, value, ...stamp })
           : x)) };
       }
-      return { ...c, conditions: [...conds, { id: uid(), name, value, sinceRound: r }] };
+      return { ...c, conditions: [...conds, { id: uid(), name, value, ...stamp }] };
     }));
     exitSelect();
   };
 
-  const applyEffect = (ids, name, mods) => {
+  const applyEffect = (ids, name, mods, byId) => {
     const r = encounter.round ?? 1;
+    const byName = byId ? (encounter.combatants.find((c) => c.id === byId) || {}).name : null;
     setCombatants((cs) => cs.map((c) => (ids.includes(c.id)
-      ? { ...c, effects: [...(c.effects || []), { id: uid(), name, mods, sinceRound: r }] }
+      ? { ...c, effects: [...(c.effects || []), {
+          id: uid(), name, mods,
+          sinceRound: startRoundFor(c.id, byId, r), appliedRound: r, appliedBy: byName || null,
+        }] }
       : c)));
     exitSelect();
   };
@@ -978,16 +1028,18 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
       {condFor && (
         <ConditionPicker
           targets={condTargets}
+          combatants={ordered}
           onDropTarget={(id) => setCondFor((cur) => cur.filter((x) => x !== id))}
-          onPick={(name, value) => applyCondition(condFor, name, value)}
+          onPick={(name, value, by) => applyCondition(condFor, name, value, by)}
           onClose={() => setCondFor(null)}
         />
       )}
       {fxFor && (
         <CustomEffectModal
           targets={fxTargets}
+          combatants={ordered}
           onDropTarget={(id) => setFxFor((cur) => cur.filter((x) => x !== id))}
-          onApply={(name, mods) => applyEffect(fxFor, name, mods)}
+          onApply={(name, mods, by) => applyEffect(fxFor, name, mods, by)}
           onClose={() => setFxFor(null)}
         />
       )}

@@ -178,15 +178,21 @@ export function conditionEffects(c) {
 }
 
 /* ---- chip age ----
- * Conditions and custom effects carry `sinceRound`: the round their CURRENT
- * state began. Stepping frightened 2 down to frightened 1 re-stamps it, so the
+ * Conditions and custom effects carry `sinceRound`: the round their age clock
+ * counts from. Stepping frightened 2 down to frightened 1 re-stamps it, so the
  * marker answers "how long has it been frightened 1", not "how long has it been
  * frightened at all". Legacy chips (saved before the field existed) have no
  * stamp and read as null — they render no marker rather than a false full one.
  *
- * Floors at 0 so the round bar's back / reset buttons make the marker fade out
- * instead of going negative. Those buttons deliberately do NOT re-stamp:
- * stepping back should look like stepping back. */
+ * `sinceRound` is NOT always the round of application. When the GM records who
+ * applied the chip, the clock starts on the target's next turn: if the applier
+ * acts after the target in the turn order, the target has already gone this
+ * round, so the clock starts the round after and `sinceRound` sits one round in
+ * the future. `appliedRound` keeps the literal round for the tooltip.
+ *
+ * Floors at 0, which covers both that future stamp and the round bar's back /
+ * reset buttons — the marker fades out instead of going negative. Those buttons
+ * deliberately do NOT re-stamp: stepping back should look like stepping back. */
 export function roundsUnchanged(item, round) {
   if (!item || item.sinceRound == null) return null;
   return Math.max(0, (round ?? 1) - item.sinceRound);
@@ -194,8 +200,10 @@ export function roundsUnchanged(item, round) {
 
 function ageLine(item, n) {
   if (n == null) return "";
-  if (n === 0) return "applied this round";
-  return `unchanged for ${n} round${n === 1 ? "" : "s"} · since round ${item.sinceRound}`;
+  const applied = item.appliedRound ?? item.sinceRound;
+  const by = item.appliedBy ? ` by ${item.appliedBy}` : "";
+  const age = n === 0 ? "not yet aged" : `unchanged for ${n} round${n === 1 ? "" : "s"}`;
+  return `applied round ${applied}${by} · ${age}`;
 }
 
 // Tooltip text for a condition chip: how long it's held, then its mechanics.

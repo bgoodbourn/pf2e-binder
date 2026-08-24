@@ -795,6 +795,13 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .inp.area{resize:vertical;}
 .form-div{height:1px;background:var(--line);margin:18px 0;}
 .modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;}
+/* who applied it — sits under the applying-to band in both modals, so the two
+   "who" questions read together before the what */
+.applied-by{margin-bottom:16px;}
+.applied-by select.inp{appearance:none;cursor:pointer;text-transform:lowercase;
+  background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%236c6c68' stroke-width='1.5'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:30px;}
+.cond-search{margin-bottom:2px;}
 .cond-list{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0;max-height:260px;overflow-y:auto;padding:2px;}
 .cond-opt{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);
   border-radius:999px;padding:6px 12px;font-size:12.5px;color:var(--ink-2);cursor:pointer;text-transform:lowercase;

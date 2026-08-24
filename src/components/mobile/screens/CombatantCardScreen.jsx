@@ -22,7 +22,9 @@ export function CombatantCardScreen({ combatant: c, round, pending, setPending, 
   };
   const addCond = (name) => {
     if (c.conditions.some((x) => x.name === name)) return;
-    onPatch({ conditions: [...c.conditions, { id: uid(), name, value: VALUED.has(name) ? 1 : null, sinceRound: round }] });
+    onPatch({ conditions: [...c.conditions, {
+      id: uid(), name, value: VALUED.has(name) ? 1 : null, sinceRound: round, appliedRound: round,
+    }] });
   };
   const removeCond = (id) => onPatch({ conditions: c.conditions.filter((x) => x.id !== id) });
   /* Re-stamps sinceRound: the age dots count how long the condition has held
