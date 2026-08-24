@@ -254,6 +254,14 @@ const FX_LINES = [
 ];
 const FX_CLAMP = 6;
 
+/* Select-mode group picks. "pcs" takes companions too — they're the party's, and
+ * a GM buffing the party means the pets as well. */
+const QUICK_PICKS = [
+  { label: "all", match: () => true },
+  { label: "enemies", match: (c) => c.kind === "enemy" },
+  { label: "pcs", match: (c) => c.kind === "pc" || c.kind === "companion" },
+];
+
 function FxStep({ v, onSet }) {
   return (
     <span className="fx-step">
@@ -278,12 +286,14 @@ function CustomEffectModal({ targets, onDropTarget, onApply, onClose }) {
     setFocusId(line.id);
   };
 
-  // Zero lines are dropped, and a custom line with no label has nothing to modify.
+  /* A zero on one of the eight fixed lines just means "unset" and is dropped. A
+   * custom line is different: left at zero it becomes a note (v: null) rather
+   * than a modifier, so the GM can write "can't use reactions" without inventing
+   * a number for it. Either way a custom line needs a label to mean anything. */
   const mods = [
-    ...FX_LINES.map((l, i) => ({ target: l.target, v: fixed[i] })),
-    ...custom.map((c) => ({ target: c.label.trim(), v: c.v })),
-  ].filter((m) => m.v !== 0 && m.target);
-  const anySet = fixed.some((v) => v !== 0) || custom.some((c) => c.v !== 0);
+    ...FX_LINES.map((l, i) => ({ target: l.target, v: fixed[i] })).filter((m) => m.v !== 0),
+    ...custom.map((c) => ({ target: c.label.trim(), v: c.v === 0 ? null : c.v })).filter((m) => m.target),
+  ];
   const valid = name.trim() !== "" && mods.length > 0 && targets.length > 0;
   const many = targets.length > 1;
 
@@ -315,7 +325,7 @@ function CustomEffectModal({ targets, onDropTarget, onApply, onClose }) {
             <div key={c.id} className={`fx-line${c.v !== 0 ? " on" : ""}`}>
               <input
                 className="fx-line-custom"
-                placeholder="what does it affect…"
+                placeholder="effect"
                 value={c.label}
                 ref={(el) => { if (el && focusId === c.id) { el.focus(); setFocusId(null); } }}
                 onChange={(e) => setCustomAt(c.id, { label: e.target.value })}
@@ -328,13 +338,13 @@ function CustomEffectModal({ targets, onDropTarget, onApply, onClose }) {
           <button className="fx-add" onClick={addCustom}>+ add new</button>
         </div>
         <div className="fx-preview">
-          {!name.trim() && !anySet && <span className="fx-preview-empty">nothing set yet</span>}
-          {(name.trim() || anySet) && (
+          {!name.trim() && !mods.length && <span className="fx-preview-empty">nothing set yet</span>}
+          {(name.trim() || mods.length > 0) && (
             <>
               <span className="cond"><span className="cond-fx-dot" aria-hidden />{name.trim() || "unnamed"}</span>
               {mods.map((m, i) => (
-                <span key={`${m.target}-${i}`} className={`cbt-offpill${m.v > 0 ? " up" : ""}`}>
-                  {m.target} <strong>{sign(m.v)}</strong>
+                <span key={`${m.target}-${i}`} className={`cbt-offpill${m.v == null ? " note" : m.v > 0 ? " up" : ""}`}>
+                  {m.target}{m.v != null && <> <strong>{sign(m.v)}</strong></>}
                 </span>
               ))}
             </>
@@ -516,10 +526,14 @@ function CombatantRow({
           })}
         </div>
         )}
-        {fx.offSheet.length > 0 && (
+        {(fx.offSheet.length > 0 || fx.notes.length > 0) && (
           <div className="cbt-offpills">
             {fx.offSheet.map((o) => (
               <span key={o.label} className={`cbt-offpill${o.delta > 0 ? " up" : ""}`}>{o.label} <strong>{sign(o.delta)}</strong></span>
+            ))}
+            {/* an effect line with no number — the GM's own words, shown as-is */}
+            {fx.notes.map((n, i) => (
+              <span key={`note-${i}`} className="cbt-offpill note">{n}</span>
             ))}
           </div>
         )}
@@ -657,6 +671,12 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
 
   const toggleSelected = (id) =>
     setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+
+  /* A quick pick is a toggle: pressing the group again clears it. "Already this
+   * group" means the selection is exactly the group — untick one row by hand and
+   * the pill goes quiet, so pressing it re-selects rather than clearing. */
+  const sameSet = (ids) => ids.length === selected.length && ids.every((id) => selected.includes(id));
+  const quickPick = (ids) => setSelected(sameSet(ids) ? [] : ids);
   const exitSelect = () => { setSelectMode(false); setSelected([]); };
 
   /* Both applies write every target in ONE patch so the whole action is a single
@@ -876,9 +896,17 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
             <span className="sel-label">selected</span>
           </span>
           <span className="sel-div" />
-          <button className="sel-quick" onClick={() => setSelected(encounter.combatants.map((c) => c.id))}>all</button>
-          <button className="sel-quick" onClick={() => setSelected(encounter.combatants.filter((c) => c.kind === "enemy").map((c) => c.id))}>enemies</button>
-          <button className="sel-quick" onClick={() => setSelected(encounter.combatants.filter((c) => c.kind === "pc" || c.kind === "companion").map((c) => c.id))}>pcs</button>
+          {QUICK_PICKS.map((q) => {
+            const ids = encounter.combatants.filter(q.match).map((c) => c.id);
+            return (
+              <button
+                key={q.label}
+                className={`sel-quick${ids.length && sameSet(ids) ? " on" : ""}`}
+                disabled={!ids.length}
+                onClick={() => quickPick(ids)}
+              >{q.label}</button>
+            );
+          })}
           <span className="sel-actions">
             <button className="sel-act" disabled={!selected.length} onClick={() => setCondFor(selected)}>+ condition</button>
             <button className="sel-act fx" disabled={!selected.length} onClick={() => setFxFor(selected)}>+ effect</button>

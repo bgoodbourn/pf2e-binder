@@ -498,6 +498,11 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .sel-quick{border:1px solid #333;background:transparent;border-radius:8px;padding:5px 10px;
   font-size:11.5px;color:#bdbcb5;text-transform:lowercase;cursor:pointer;font-family:inherit;}
 .sel-quick:hover{border-color:#666;color:#fff;}
+/* filled when the selection is exactly this group, so it's clear that pressing
+   again will clear rather than re-select */
+.sel-quick.on{background:var(--pill-text);border-color:var(--pill-text);color:var(--ink);}
+.sel-quick:disabled{opacity:.4;cursor:not-allowed;}
+.sel-quick:disabled:hover{border-color:#333;color:#bdbcb5;}
 .sel-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
 .sel-act{border:0;border-radius:10px;padding:8px 14px;font-size:12.5px;text-transform:lowercase;cursor:pointer;
   background:var(--pill-text);color:var(--ink);font-family:inherit;}
@@ -638,6 +643,9 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .cbt-offpills{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px;}
 .cbt-offpill{font-size:11px;text-transform:lowercase;padding:4px 10px;border-radius:8px;background:#f7ebe9;color:#b4544a;white-space:nowrap;}
 .cbt-offpill.up{background:#e8f0e9;color:#3f7d52;}
+/* a note line has no number and so no direction to colour — plain grey, and it
+   keeps the GM's own capitalisation rather than lowercasing their sentence */
+.cbt-offpill.note{background:var(--hush);color:var(--ink-2);text-transform:none;}
 .cbt-offpill strong{font-weight:700;}
 .cbt-roll{margin-top:10px;display:inline-flex;align-items:center;gap:11px;background:#faf9f7;border:1px solid #ededea;border-radius:12px;padding:7px 12px 7px 11px;flex-wrap:wrap;}
 .cbt-roll-label{font-size:11px;text-transform:lowercase;color:#9a9a95;letter-spacing:.02em;}
@@ -744,8 +752,16 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .cbt.compact .cbt-avatar,.cbt.compact .cbt-x{margin-top:0;}
 .init-inp{transition:width .3s cubic-bezier(.4,0,.2,1),height .3s cubic-bezier(.4,0,.2,1),
   font-size .3s ease,border-radius .3s ease;}
-.cbt.compact .cbt-init{flex:0 0 34px;}
-.cbt.compact .init-inp{width:34px;height:26px;font-size:14px;border-radius:8px;}
+/* Wide enough for two bold digits once the number input's own spinner space is
+   gone — at 34px "28" clipped while "19" fit, which is what made it look broken
+   rather than merely tight. */
+.init-inp{padding:0;-moz-appearance:textfield;}
+.init-inp::-webkit-outer-spin-button,.init-inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.cbt.compact .cbt-init{flex:0 0 42px;}
+.cbt.compact .init-inp{width:42px;height:26px;font-size:14px;border-radius:8px;}
+/* the compact row is one line by definition — it must not wrap on narrow screens
+   the way the expanded row is allowed to */
+.cbt.compact{flex-wrap:nowrap;}
 .hp-inp{transition:height .3s cubic-bezier(.4,0,.2,1);}
 .cbt.compact .hp-inp{height:26px;}
 

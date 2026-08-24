@@ -143,11 +143,18 @@ export function conditionEffects(c) {
     const n = cond.value != null ? cond.value : 1;
     def.fx(n, c).forEach((x) => contribs.push(x));
   });
-  // GM-authored custom effects. Untyped on purpose: a hand-written effect has no
-  // declared PF2e bonus type, so it must sum with everything rather than compete
-  // with status/circumstance penalties — which is exactly what stackDelta does.
+  /* GM-authored custom effects. Numeric mods are untyped on purpose: a
+   * hand-written effect has no declared PF2e bonus type, so it must sum with
+   * everything rather than compete with status/circumstance penalties — which is
+   * exactly what stackDelta does. A mod with a null value is a note, not a
+   * modifier ("can't use reactions"): it has nothing to stack, so it bypasses the
+   * engine and is handed back as its own list. */
+  const notes = [];
   (c.effects || []).forEach((e) => {
-    (e.mods || []).forEach((m) => contribs.push({ target: m.target, v: m.v, type: "untyped" }));
+    (e.mods || []).forEach((m) => {
+      if (m.v == null) { if (m.target) notes.push(m.target); return; }
+      contribs.push({ target: m.target, v: m.v, type: "untyped" });
+    });
   });
   const adjusted = { ...base };
   const deltas = {};
@@ -167,7 +174,7 @@ export function conditionEffects(c) {
       const ai = OFF_ORDER.indexOf(a.label), bi = OFF_ORDER.indexOf(b.label);
       return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
     });
-  return { base, adjusted, deltas, offSheet };
+  return { base, adjusted, deltas, offSheet, notes };
 }
 
 /* ---- chip age ----
@@ -202,7 +209,8 @@ export function conditionTip(cond, n) {
 
 // Tooltip for a custom effect chip: its modifiers, spelled out.
 export function effectTip(e, n) {
-  const parts = (e.mods || []).map((m) => `${m.target} ${m.v > 0 ? "+" : "−"}${Math.abs(m.v)}`);
+  const parts = (e.mods || []).map((m) =>
+    (m.v == null ? m.target : `${m.target} ${m.v > 0 ? "+" : "−"}${Math.abs(m.v)}`));
   const base = parts.length ? `${e.name} — ${parts.join(", ")}` : e.name;
   const age = ageLine(e, n);
   return age ? `${age}\n${base}` : base;
