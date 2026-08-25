@@ -6,7 +6,7 @@
  *  (initiative, HP, condition-adjusted stats), and the EncountersView shell.
  *  Only EncountersView is consumed outside this module.
  * ==================================================================== */
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { sign, uid, d20 } from "../lib/pf2e.js";
 import {
   CONDITIONS, VALUED, conditionEffects, conditionTip, effectTip, roundsUnchanged, encounterBudget,
@@ -20,6 +20,7 @@ import { AON_BASE } from "../lib/aon.js";
 import { useScenarioData } from "../data/ScenarioContext.jsx";
 import { Sym } from "./icons.jsx";
 import { useCompanions } from "./useCompanions.js";
+import { useEncNav } from "./useEncNav.js";
 
 /* ---- Add Combatant modal (custom ally / enemy) ---- */
 function AddCombatant({ onAdd, onClose }) {
@@ -409,6 +410,14 @@ function CombatantRow({
   c, tucked, index, round, compact, selected,
   onPatch, onRemove, onOpenPc, onOpenNpc, onAddCondition, onAddEffect, onToggleSelect,
 }) {
+  // Hand the row element to the rail's nav registry so the mini order can
+  // measure it for dimming and scroll to it on a jump.
+  const nav = useEncNav();
+  const setRow = nav && nav.setRow;
+  const rowRef = useCallback(
+    (el) => { if (setRow) setRow(c.id, el); },
+    [setRow, c.id]
+  );
   const [roll, setRoll] = useState(null); // ephemeral save-roll readout (not persisted)
   const [editing, setEditing] = useState(false); // stat-edit mode (roll vs edit, one at a time)
   const [stepping, setStepping] = useState(null); // condition id whose value stepper is open
@@ -457,6 +466,7 @@ function CombatantRow({
   const rollCol = crit ? "#3f7d52" : fumble ? "#b4544a" : "#111";
   return (
     <div
+      ref={rowRef}
       className={`cbt kind-${c.kind}${tucked ? " tucked" : ""}${compact ? " compact" : ""}${selected ? " sel" : ""}`}
       style={{ "--i": Math.min(index, 7) }}
       onClick={compact ? onToggleSelect : undefined}
@@ -658,6 +668,24 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   // Re-renders once the companion stat blocks land, so the party's companions
   // can be offered in the "add player" menu with their derived numbers.
   useCompanions();
+  // The rail's mini initiative order scrolls and measures against this
+  // element; see encrail.jsx.
+  const nav = useEncNav();
+  const setScroller = nav && nav.setScroller;
+  const scrollerRef = useCallback((el) => { if (setScroller) setScroller(el); }, [setScroller]);
+
+  /* The running sheet grows with the log and only scrolls in the rare case that
+   * it outgrows the space beside the list. When it does, the newest line is the
+   * one worth seeing, so a new entry pins the box to the bottom. Read off the
+   * prop rather than the local `log` so the hook sits above the early return. */
+  const logCount = (encounter && Array.isArray(encounter.log) ? encounter.log : []).length;
+  const logBoxRef = useRef(null);
+  const seenLogCount = useRef(logCount);
+  useEffect(() => {
+    const box = logBoxRef.current;
+    if (box && logCount > seenLogCount.current) box.scrollTop = box.scrollHeight;
+    seenLogCount.current = logCount;
+  }, [logCount]);
 
   // Switching encounters drops the selection (React's adjust-state-on-prop-change
   // pattern — an effect here would render the stale selection for a frame first).
@@ -813,7 +841,9 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
 
   return (
     <article className="article encv">
-      <div className="enc-scroll">
+      {/* One scroll for the whole thing: the toolbar sticks to the top of it and
+          the running sheet floats alongside the list rather than scrolling away. */}
+      <div className="enc-scroll" ref={scrollerRef}>
       <div className="enc-head">
         <Sym name="combat" className="article-sym" />
         <div className="enc-head-main">
@@ -856,6 +886,7 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
         <AutoTextarea className="enc-note-input" value={encounter.note} onChange={setNote} placeholder="describe the encounter — terrain, stakes, how it kicks off…" ariaLabel="encounter note" />
       </div>
 
+      <div className="enc-chrome">
       <div className="enc-toolbar">
         <button className="tb roll" onClick={rollInitiative}>
           <Sym name="abilities" className="tb-sym" /> roll initiative
@@ -922,22 +953,6 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
         <button className="tb danger-tb" onClick={() => setCombatants(() => [])}>clear</button>
       </div>
 
-      {mapOpen && (
-        <div className="enc-map">
-          {encounter.map ? (
-            <img src={encounter.map} alt="encounter map" />
-          ) : (
-            <div className="enc-map-empty">no map set for this encounter</div>
-          )}
-          <div className="enc-map-ctrl">
-            <input className="inp" placeholder="image url" value={mapUrl} onChange={(e) => setMapUrl(e.target.value)} />
-            <button className="mini" disabled={!mapUrl.trim()} onClick={() => { onChange((enc) => ({ ...enc, map: mapUrl.trim() })); setMapUrl(""); }}>set</button>
-            <label className="mini filebtn">upload<input type="file" accept="image/*" hidden onChange={onMapFile} /></label>
-            {encounter.map && <button className="mini danger" onClick={() => onChange((enc) => ({ ...enc, map: "" }))}>remove</button>}
-          </div>
-        </div>
-      )}
-
       {/* always mounted so it can animate open and shut */}
       <div className={`sel-bar-wrap${selectMode ? " on" : ""}`}>
         <div className="sel-bar">
@@ -964,45 +979,62 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
           </span>
         </div>
       </div>
+      </div>
+
+      {mapOpen && (
+        <div className="enc-map">
+          {encounter.map ? (
+            <img src={encounter.map} alt="encounter map" />
+          ) : (
+            <div className="enc-map-empty">no map set for this encounter</div>
+          )}
+          <div className="enc-map-ctrl">
+            <input className="inp" placeholder="image url" value={mapUrl} onChange={(e) => setMapUrl(e.target.value)} />
+            <button className="mini" disabled={!mapUrl.trim()} onClick={() => { onChange((enc) => ({ ...enc, map: mapUrl.trim() })); setMapUrl(""); }}>set</button>
+            <label className="mini filebtn">upload<input type="file" accept="image/*" hidden onChange={onMapFile} /></label>
+            {encounter.map && <button className="mini danger" onClick={() => onChange((enc) => ({ ...enc, map: "" }))}>remove</button>}
+          </div>
+        </div>
+      )}
 
       <div className="enc-body">
         <div className={`cbt-list${selectMode ? " compact" : ""}`}>
-          {ordered.length === 0 && <div className="cbt-empty">no combatants yet — add players or creatures above.</div>}
-          {ordered.map((c, i) => (
-            <CombatantRow
-              key={c.id}
-              c={c}
-              tucked={tuckedIds.has(c.id)}
-              index={i}
-              round={round}
-              compact={selectMode}
-              selected={selected.includes(c.id)}
-              onToggleSelect={() => toggleSelected(c.id)}
-              onPatch={(p) => patch(c.id, p)}
-              onRemove={() => removeCombatant(c.id)}
-              onOpenPc={onOpenPc}
-              onOpenNpc={onOpenNpc}
-              onAddCondition={() => setCondFor([c.id])}
-              onAddEffect={() => setFxFor([c.id])}
-            />
-          ))}
+        {ordered.length === 0 && <div className="cbt-empty">no combatants yet — add players or creatures above.</div>}
+        {ordered.map((c, i) => (
+          <CombatantRow
+            key={c.id}
+            c={c}
+            tucked={tuckedIds.has(c.id)}
+            index={i}
+            round={round}
+            compact={selectMode}
+            selected={selected.includes(c.id)}
+            onToggleSelect={() => toggleSelected(c.id)}
+            onPatch={(p) => patch(c.id, p)}
+            onRemove={() => removeCombatant(c.id)}
+            onOpenPc={onOpenPc}
+            onOpenNpc={onOpenNpc}
+            onAddCondition={() => setCondFor([c.id])}
+            onAddEffect={() => setFxFor([c.id])}
+          />
+        ))}
         </div>
 
         <aside className="running-sheet">
-          <div className="rs-head">
-            <span className="rs-label">running sheet</span>
-            <button className="rs-add" onClick={addLog}>+ log</button>
-          </div>
-          <div className="rs-entries">
-            {log.length === 0 && <div className="rs-empty">log key beats as the fight unfolds.</div>}
-            {log.map((l) => (
-              <div className="rs-entry" key={l.id}>
-                <span className="rs-badge">r{l.round}</span>
-                <AutoTextarea className="rs-input" value={l.text} onChange={(v) => patchLog(l.id, v)} placeholder="what happened…" ariaLabel="log entry" />
-                <button className="rs-del" title="clear this line" onClick={() => deleteLog(l.id)}>×</button>
-              </div>
-            ))}
-          </div>
+        <div className="rs-head">
+          <span className="rs-label">running sheet</span>
+          <button className="rs-add" onClick={addLog}>+ log</button>
+        </div>
+        <div className="rs-entries" ref={logBoxRef}>
+          {log.length === 0 && <div className="rs-empty">log key beats as the fight unfolds.</div>}
+          {log.map((l) => (
+            <div className="rs-entry" key={l.id}>
+              <span className="rs-badge">r{l.round}</span>
+              <AutoTextarea className="rs-input" value={l.text} onChange={(v) => patchLog(l.id, v)} placeholder="what happened…" ariaLabel="log entry" />
+              <button className="rs-del" title="clear this line" onClick={() => deleteLog(l.id)}>×</button>
+            </div>
+          ))}
+        </div>
         </aside>
       </div>
       </div>

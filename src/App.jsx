@@ -2,12 +2,13 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useScenarioData } from "./data/ScenarioContext.jsx";
 import { parseBuild, uid } from "./lib/pf2e.js";
 import { loadAonIndex } from "./lib/aon.js";
-import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters } from "./lib/combatants.js";
+import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters, orderCombatants } from "./lib/combatants.js";
 import { Sym, ScenSym } from "./components/icons.jsx";
 import { Sheet, Importer, NotesBox, NewScenario } from "./components/party.jsx";
 import { AddNpc, NpcSheet } from "./components/npcs.jsx";
 import { ScenarioView } from "./components/scenario.jsx";
 import { EncountersView } from "./components/encounters.jsx";
+import { EncNavProvider, EncounterRail } from "./components/encrail.jsx";
 import { GmNotes } from "./components/gmnotes.jsx";
 import { HelpCorner, HelpPanel } from "./components/help.jsx";
 
@@ -359,6 +360,12 @@ export function BinderApp({ onRequestMobile }) {
   const pc = useMemo(() => pcs.find((p) => p.id === effPcId) || null, [pcs, effPcId]);
   const npc = useMemo(() => allNpcs.find((n) => n.id === npcSel) || null, [allNpcs, npcSel]);
   const encounter = useMemo(() => encounters.find((e) => e.id === effEncId) || null, [encounters, effEncId]);
+  // Shared with the rail's mini initiative order — same collection, same sort as
+  // the main combatant list, never re-ordered or filtered independently.
+  const orderedCombatants = useMemo(
+    () => (encounter ? orderCombatants(encounter.combatants) : []),
+    [encounter]
+  );
   const sheetSections = useMemo(() => {
     const has = (id) => {
       if (id === "spells") return pc && (pc.casters.length || pc.focus);
@@ -471,9 +478,19 @@ export function BinderApp({ onRequestMobile }) {
             <main className="content"><div className="panel" style={{ padding: 40, color: "var(--ink-3)" }}>loading…</div></main>
           )
         ) : (
-        <>
+        <EncNavProvider>
         {/* ---- rail ---- */}
-        <nav className={`rail ${navOpen ? "open" : ""}`}>
+        <nav className={`rail ${navOpen ? "open" : ""}${effWorkspace === "encounters" ? " rail-enc-mode" : ""}`}>
+          {effWorkspace === "encounters" ? (
+            <EncounterRail
+              encounters={encounters}
+              activeId={effEncId}
+              ordered={orderedCombatants}
+              onSelect={(id) => { setActiveEnc(id); setNavOpen(false); }}
+              onNew={addEncounter}
+              onPrefill={prefillEncounters}
+            />
+          ) : (
           <div className="rail-scroll">
             {effWorkspace === "characters" && (
               <>
@@ -544,29 +561,8 @@ export function BinderApp({ onRequestMobile }) {
                 </div>
               ))}
 
-            {effWorkspace === "encounters" && (
-              <div className="rail-group">
-                <div className="rail-group-label">encounters</div>
-                {encounters.map((e) => (
-                  <button
-                    key={e.id}
-                    className={`rail-tab ${effEncId === e.id ? "active" : ""}`}
-                    onClick={() => { setActiveEnc(e.id); setNavOpen(false); }}
-                  >
-                    <Sym name="combat" className="rail-sym" />
-                    <span className="rail-label">{e.name || "untitled"}<span className="rail-sub"> · {e.combatants.length}</span></span>
-                    <span className="rail-arrow">→</span>
-                  </button>
-                ))}
-                <button className="rail-tab add" onClick={addEncounter}>
-                  <span className="rail-plus">+</span><span className="rail-label">new encounter</span>
-                </button>
-                <button className="rail-tab add" onClick={prefillEncounters}>
-                  <span className="rail-plus">↡</span><span className="rail-label">prefill from scenario</span>
-                </button>
-              </div>
-            )}
           </div>
+          )}
         </nav>
 
         {navOpen && <div className="scrim" onClick={() => setNavOpen(false)} />}
@@ -644,7 +640,7 @@ export function BinderApp({ onRequestMobile }) {
             )}
           </div>
         </main>
-        </>
+        </EncNavProvider>
         )}
 
         {/* per-tab contextual help — quiet corner trigger + slide-over */}

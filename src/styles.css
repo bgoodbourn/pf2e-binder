@@ -89,6 +89,65 @@ button{font-family:inherit;}
 .rail-tab.add{color:var(--ink-3);}
 .rail-plus{width:18px;text-align:center;font-size:17px;color:var(--ink-3);}
 
+/* ---- encounters rail: current encounter + collapsible list + mini order ----
+   Nothing in here scrolls. The encounter list expands to its full natural
+   height and the order below gives up whatever it needs, shrinking its rows
+   and type to fit rather than putting a second scrollbar in a 290px rail. */
+.rail.rail-enc-mode{padding:22px 18px 16px;}
+.enc-rail{flex:1;min-height:0;display:flex;flex-direction:column;}
+
+.enc-chip{flex:0 0 auto;display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  border:0;cursor:pointer;padding:9px 10px 9px 12px;border-radius:13px;font-size:14px;font-family:inherit;
+  background:var(--accent-tint);box-shadow:inset 3px 0 0 var(--accent);color:var(--ink);}
+.enc-chip.empty{cursor:default;background:var(--hush);box-shadow:none;color:var(--faint);
+  font-size:13px;text-transform:lowercase;}
+.enc-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.enc-chip-sym{width:16px;height:16px;flex:0 0 16px;color:var(--accent);}
+.enc-chip-name{flex:1;min-width:0;text-transform:lowercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.enc-chip-count{color:var(--ink-3);}
+.enc-chip-toggle{display:flex;align-items:center;gap:5px;font-size:11px;color:#a8674c;
+  text-transform:lowercase;white-space:nowrap;}
+.enc-chip-chev{display:inline-flex;font-size:9px;transition:transform .3s cubic-bezier(.4,0,.2,1);}
+.enc-chip-chev.up{transform:rotate(180deg);}
+
+.enc-rail-listwrap{flex:0 0 auto;overflow:hidden;
+  transition:max-height .34s cubic-bezier(.4,0,.2,1),opacity .24s ease;}
+.enc-rail-list{padding-top:6px;}
+/* tighter than the app's other rail rows on purpose — the whole list has to
+   fit without a scrollbar */
+.enc-rail-row{display:flex;align-items:center;gap:9px;width:100%;height:27px;padding:0 12px;
+  border:0;background:transparent;border-radius:9px;cursor:pointer;font-family:inherit;
+  font-size:12.5px;color:var(--ink-2);text-align:left;transition:background .12s,color .12s;}
+.enc-rail-row:hover{background:var(--hush);color:var(--ink);}
+.enc-rail-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.enc-rail-row.add{color:var(--ink-3);}
+.enc-rail-sym{width:13px;height:13px;flex:0 0 13px;color:var(--ink-2);}
+.enc-rail-plus{width:13px;flex:0 0 13px;text-align:center;font-size:14px;line-height:1;}
+.enc-rail-name{flex:1;min-width:0;text-transform:lowercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.enc-rail-count{color:var(--faint);}
+
+.mini-order{flex:1;min-height:0;display:flex;flex-direction:column;
+  margin-top:10px;padding-top:10px;border-top:1px solid #e2e1db;}
+.mini-order-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 12px 6px;}
+.mini-order-label{font-size:10.5px;letter-spacing:.04em;text-transform:lowercase;color:var(--faint);}
+.mini-order-n{font-size:10.5px;text-transform:lowercase;color:#bdbcb5;}
+.mini-order-list{flex:1;min-height:0;overflow:hidden;list-style:none;margin:0;padding:0 6px 0 0;}
+.mini-row{display:flex;align-items:center;gap:8px;width:100%;padding:0 8px 0 6px;border:0;
+  background:transparent;border-radius:7px;cursor:pointer;font-family:inherit;text-align:left;
+  color:var(--faint);transition:background .12s,color .12s;}
+.mini-row:hover{background:var(--hush);}
+.mini-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+/* "you are here": the lit run brackets whatever the main list is showing */
+.mini-row.on .mini-name{color:var(--ink);}
+.mini-row.on .mini-dot{background:var(--accent);}
+.mini-dot{width:4px;height:4px;flex:0 0 4px;border-radius:50%;background:transparent;transition:background .15s;}
+.mini-init{width:15px;flex:0 0 15px;text-align:right;color:#bdbcb5;
+  font-family:'Inter Tight',sans-serif;font-weight:600;}
+.mini-name{flex:1;min-width:0;line-height:1.2;text-transform:lowercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s;}
+.mini-foe{width:5px;height:5px;flex:0 0 5px;border-radius:1.5px;background:#d8d7d1;}
+.mini-empty{font-size:11.5px;color:#bdbcb5;text-transform:lowercase;padding:2px 8px;}
+
 /* content + panel */
 .content{flex:1;overflow-y:auto;padding:24px 24px 0 4px;display:flex;flex-direction:column;}
 .panel{width:100%;max-width:920px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:26px;
@@ -96,14 +155,19 @@ button{font-family:inherit;}
   display:flex;flex-direction:column;flex:1 0 auto;}
 .topbar{display:none;}
 .article{padding:42px 50px 90px;}
-.article.encv{display:flex;flex-direction:column;flex:1;min-height:0;padding:42px 34px 0;}
+.article.encv{display:flex;flex-direction:column;flex:1;min-height:0;padding:34px 34px 0;}
 /* encounters: panel fills the viewport width (no 920px cap), body scrolls
    internally, round bar docks */
 .content.enc-active{overflow:hidden;}
 .content.enc-active>.panel{flex:1 1 0;min-height:0;overflow:hidden;max-width:none;}
-.enc-scroll{flex:1;min-height:0;overflow-y:auto;margin-right:-26px;padding-right:26px;}
+/* the panel body is one scroll: the title block rides up under a sticky
+   toolbar, the list scrolls, and the running sheet floats beside it */
+.enc-scroll{flex:1;min-height:0;overflow-y:auto;padding-right:8px;}
 .enc-scroll::-webkit-scrollbar{width:8px;}
 .enc-scroll::-webkit-scrollbar-thumb{background:#e0dfd9;border-radius:8px;}
+/* toolbar + select bar: the combat controls never leave the top of the column */
+.enc-chrome{position:sticky;top:0;z-index:3;background:var(--panel);
+  padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--hush);}
 .article-head{margin-bottom:24px;}
 .article-sym{width:50px;height:50px;color:var(--ink);margin-bottom:18px;}
 .article-eyebrow{font-size:12px;color:var(--ink-3);text-transform:lowercase;letter-spacing:.01em;margin-bottom:7px;}
@@ -411,15 +475,26 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .cbt-note-input{flex:1;min-width:0;border:0;outline:none;background:transparent;resize:none;overflow:hidden;
   font-family:inherit;font-size:12.5px;color:var(--ink-2);line-height:1.45;text-transform:lowercase;}
 .cbt-note-input::placeholder{color:#bdbcb5;}
-/* encounter body: combatant list + running sheet */
+/* combatant list + running sheet, side by side inside the one scroll */
 .enc-body{display:flex;gap:16px;align-items:flex-start;}
-.running-sheet{flex:0 0 248px;border:1px solid var(--line);border-radius:16px;background:#fbfbfa;padding:14px 13px 12px;}
+/* The sheet grows with the log rather than filling a fixed column, and sticks
+   just under the toolbar so it tracks the top of the visible window as the list
+   scrolls past it. --enc-chrome-h / --enc-view-h are measured onto .enc-scroll
+   (see encrail.jsx); the max-height only bites if the log outgrows the window,
+   and then .rs-entries takes over the scrolling. */
+.running-sheet{flex:0 0 232px;align-self:flex-start;
+  position:sticky;top:var(--enc-chrome-h,0px);z-index:1;
+  max-height:calc(var(--enc-view-h,100vh) - var(--enc-chrome-h,0px) - 12px);
+  display:flex;flex-direction:column;
+  border:1px solid var(--line);border-radius:16px;background:#fbfbfa;padding:13px 12px;}
 .rs-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
 .rs-label{font-size:10.5px;text-transform:lowercase;letter-spacing:.06em;color:var(--faint);}
 .rs-add{border:0;background:var(--hush);border-radius:999px;padding:3px 9px;font-size:11px;color:var(--ink-3);cursor:pointer;
   text-transform:lowercase;font-family:inherit;}
 .rs-add:hover{background:var(--line);color:var(--ink);}
-.rs-entries{display:flex;flex-direction:column;gap:12px;}
+.rs-entries{flex:0 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:11px;padding-right:4px;}
+.rs-entries::-webkit-scrollbar{width:7px;}
+.rs-entries::-webkit-scrollbar-thumb{background:#e0dfd9;border-radius:8px;}
 .rs-empty{font-size:11.5px;color:#bdbcb5;text-transform:lowercase;line-height:1.4;}
 .rs-entry{display:flex;gap:8px;align-items:flex-start;}
 .rs-badge{font-family:'Inter Tight',sans-serif;font-weight:700;font-size:10px;color:var(--faint);background:var(--hush);
@@ -430,7 +505,7 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .rs-del{flex:0 0 auto;border:0;background:transparent;color:#d2d1cb;font-size:13px;line-height:1;cursor:pointer;padding:1px 2px;margin-top:1px;}
 .rs-del:hover{color:#b4544a;}
 /* docked round bar */
-.round-bar{flex:0 0 auto;margin:0 -34px;padding:13px 18px;background:#141414;
+.round-bar{flex:0 0 auto;margin:14px -34px 0;padding:13px 18px;background:#141414;
   display:flex;align-items:center;gap:14px;border-radius:0 0 25px 25px;}
 .rb-readout{flex:0 0 auto;display:flex;align-items:baseline;gap:9px;}
 .rb-label{font-size:11px;letter-spacing:.06em;text-transform:lowercase;color:#8a8a86;}
@@ -462,7 +537,7 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .enc-threat-xp{-moz-appearance:textfield;}
 .enc-threat-xp::-webkit-outer-spin-button,.enc-threat-xp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 
-.enc-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px;}
+.enc-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
 .tb{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:11px;
   padding:9px 14px;font-size:13px;color:var(--ink-2);cursor:pointer;text-transform:lowercase;
   transition:border-color .14s,color .14s,background .14s;}
@@ -490,7 +565,7 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 /* borrows .round-bar's #141414 so it reads as the same class of thing:
    a temporary mode banner, not a piece of the list */
 .sel-bar{background:#141414;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-  margin-bottom:14px;}
+  margin-top:12px;}
 .sel-readout{display:flex;align-items:baseline;gap:8px;}
 .sel-count{font-family:'Inter Tight',sans-serif;font-weight:700;font-size:22px;color:#fff;line-height:1;}
 .sel-label{font-size:11px;letter-spacing:.06em;text-transform:lowercase;color:#8a8a86;}
@@ -591,11 +666,18 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .enc-map-ctrl .inp{flex:1;min-width:160px;}
 .filebtn{cursor:pointer;}
 
-.cbt-list{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;transition:gap .3s cubic-bezier(.4,0,.2,1);}
+.cbt-list{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;padding-bottom:14px;transition:gap .3s cubic-bezier(.4,0,.2,1);}
 .cbt-list.compact{gap:4px;}
 .cbt-empty{color:var(--faint);font-size:13.5px;text-transform:lowercase;padding:18px 2px;}
 .cbt{display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--panel);
   transition:padding .3s cubic-bezier(.4,0,.2,1),border-radius .3s ease,border-color .2s ease;}
+/* jumped-to from the rail's mini order: the ring lands with no transition so
+   the row is lit the instant the scroll starts, then .flash-out fades it and
+   both classes come back off. Class doubled for specificity — it has to beat
+   the tucked companion's own background. */
+.cbt.cbt.flash{box-shadow:0 0 0 2px var(--accent);background:#fdf7f3;transition:none;}
+.cbt.cbt.flash-out{box-shadow:none;background:var(--panel);
+  transition:box-shadow .75s ease,background .75s ease;}
 .cbt.kind-enemy{border-left:3px solid var(--ink);}
 .cbt.kind-ally{border-left:3px solid var(--line);}
 .cbt.kind-pc{border-left:3px solid var(--faint);}
@@ -880,13 +962,22 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
   .cbt{flex-wrap:wrap;}
   .cbt-hp{margin-left:auto;}
   .danger-tb{margin-left:0;}
+  /* the rail is a drawer here and the panel scrolls as one piece again, so the
+     persistent chrome and the mini order both stand down */
   .enc-body{flex-direction:column;}
-  .running-sheet{flex:1 1 auto;width:100%;}
+  .running-sheet{flex:1 1 auto;align-self:auto;width:100%;position:static;max-height:none;}
+  .rs-entries{overflow:visible;flex:0 0 auto;padding-right:0;}
+  .enc-chrome{position:static;border-bottom:0;padding-bottom:0;margin-bottom:18px;}
   .content.enc-active{overflow:visible;}
   .content.enc-active>.panel{flex:1 0 auto;min-height:0;overflow:visible;}
-  .enc-scroll{overflow:visible;flex:0 0 auto;margin-right:0;padding-right:0;}
+  .enc-scroll{overflow:visible;flex:0 0 auto;padding-right:0;}
   .article.encv{padding:26px 22px 0;}
-  .round-bar{position:sticky;bottom:0;margin:0 -22px;border-radius:0;}
+  .round-bar{position:sticky;bottom:0;margin:14px -22px 0;border-radius:0;}
+  .rail.rail-enc-mode{padding:24px 18px 14px;}
+  .enc-rail{overflow-y:auto;}
+  .enc-rail-listwrap{max-height:none !important;opacity:1 !important;}
+  .enc-chip-toggle{display:none;}
+  .mini-order{display:none;}
 }
 
 /* ===================== gm notes workspace ===================== */
