@@ -501,7 +501,7 @@ export function GmNotes({ initialPages, onPersist, npcs = [], encounters = [], o
         return (
           <div className="gmn-read">
             <span className="gmn-read-tag">read aloud</span>
-            <GmEditable className="gmn-read-body" editable={editable} placeholder="boxed text to read aloud, verbatim…" value={b.text} onText={onText} />
+            <GmEditable className="gmn-read-body" editable={editable} placeholder="text to read aloud…" value={b.text} onText={onText} />
           </div>
         );
       case "check": {
@@ -661,11 +661,11 @@ export function GmNotes({ initialPages, onPersist, npcs = [], encounters = [], o
               <span className={`gmn-seg-opt${isPrep ? " on" : ""}`} onClick={() => { setMode("prep"); setComposerAt(null); }}>prep</span>
               <span className={`gmn-seg-opt${!isPrep ? " on" : ""}`} onClick={() => { setMode("run"); setMenuAt(null); setLinkPickerAt(null); }}>run</span>
             </div>
-            <span className="gmn-modehint">{isPrep ? "author freely — insert, edit, delete blocks" : "click anywhere to drop a live note as you run"}</span>
+            <span className="gmn-modehint">{isPrep ? "add or edit blocks" : "click anywhere to add a note"}</span>
             <div style={{ marginLeft: "auto", position: "relative" }}>
               <div className="gmn-searchbox">
                 <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="#9a9a95" strokeWidth="1.4" strokeLinecap="round"><circle cx="7" cy="7" r="4.4" /><path d="M10.2 10.2 14 14" /></svg>
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="search every page & note…" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="search…" />
               </div>
               {shown.length > 0 && (
                 <div className="gmn-results">
@@ -683,7 +683,7 @@ export function GmNotes({ initialPages, onPersist, npcs = [], encounters = [], o
 
           <div className="gmn-doc">
             {!active ? (
-              <div className="gmn-blank">no pages yet — use “+ add page” to start your notes.</div>
+              <div className="gmn-blank">no pages yet</div>
             ) : (
               <div key={`${active.id}:${mode}`}>
                 <div className="gmn-crumb">{crumb}</div>
@@ -709,7 +709,7 @@ export function GmNotes({ initialPages, onPersist, npcs = [], encounters = [], o
                   </div>
                 ))}
                 {active.blocks.length === 0 && (
-                  <div className="gmn-blank">empty page — use the + above to insert your first block.</div>
+                  <div className="gmn-blank">use the + above to insert a block</div>
                 )}
               </div>
             )}

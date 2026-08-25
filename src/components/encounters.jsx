@@ -883,7 +883,7 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
 
       <div className="enc-note">
         <svg className="enc-note-pencil" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="#b4b3ad" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11.5 2.5l2 2L6 12l-3 1 1-3z" /></svg>
-        <AutoTextarea className="enc-note-input" value={encounter.note} onChange={setNote} placeholder="describe the encounter — terrain, stakes, how it kicks off…" ariaLabel="encounter note" />
+        <AutoTextarea className="enc-note-input" value={encounter.note} onChange={setNote} placeholder="describe the encounter…" ariaLabel="encounter note" />
       </div>
 
       <div className="enc-chrome">
