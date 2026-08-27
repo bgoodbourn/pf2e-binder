@@ -48,6 +48,16 @@ button{font-family:inherit;}
 .dock-pin-dot{width:8px;height:8px;border-radius:50%;border:1.6px solid var(--faint);}
 .dock-pin.on{border-color:var(--accent);background:var(--accent-tint);color:var(--accent);}
 .dock-pin.on .dock-pin-dot{border:0;background:var(--accent);}
+/* help — a peer of the workspace tabs, so leaving help is one click */
+.dock-help{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);
+  color:var(--ink-3);border-radius:999px;padding:5px 13px 5px 6px;font-size:12.5px;cursor:pointer;
+  font-family:inherit;text-transform:lowercase;transition:.14s;}
+.dock-help:hover{border-color:var(--ink-3);color:var(--ink-2);}
+.dock-help-q{width:20px;height:20px;flex:0 0 20px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:999px;background:var(--hush);color:var(--faint);font-size:12px;font-weight:600;
+  transition:.14s;}
+.dock-help.on{border-color:var(--ink);color:var(--ink);}
+.dock-help.on .dock-help-q{background:var(--ink);color:var(--pill-text);}
 /* pull handle — "ghost": blends into the panel, never black */
 .dock-handle{position:absolute;left:50%;top:0;transform:translateX(-50%);
   display:flex;align-items:center;gap:7px;
@@ -1146,51 +1156,109 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
   .gmn-results{width:280px;}
 }
 
-/* ---- contextual help: corner trigger + slide-over reference ---- */
-.help-corner{position:fixed;right:18px;bottom:16px;z-index:35;display:inline-flex;align-items:center;gap:8px;
-  padding:5px 12px 5px 9px;border-radius:999px;background:#fff;border:1px solid var(--line);
-  box-shadow:0 2px 8px -3px rgba(0,0,0,.14);cursor:pointer;transition:border-color .14s;}
-.help-corner:hover{border-color:var(--ink-3);}
-.help-corner-q{width:18px;height:18px;flex:0 0 18px;display:inline-flex;align-items:center;justify-content:center;
-  border-radius:999px;background:var(--hush);color:var(--faint);font-size:12px;font-weight:600;}
-.help-corner-label{font-size:12px;color:var(--faint);text-transform:lowercase;}
+/* ---- help tab: searchable feature index ---- *
+ * Colours the app has no token for are scoped here rather than added to
+ * :root — nothing outside the help tab uses them. */
+.htab{flex:1;display:flex;min-height:0;
+  --htab-field:#faf9f6;--htab-hover:#f4f3ef;--htab-sel:#f5f3ef;--htab-input:#e0dfd9;
+  --htab-hair:#eceae4;--htab-ink-2:#4a4842;--htab-muted:#8a877f;
+  --htab-faint:#a5a29a;--htab-faint-2:#b3b1aa;}
 
-.help-layer{position:fixed;inset:0;z-index:40;}
-.help-dim{position:absolute;inset:0;background:rgba(20,19,16,.34);animation:help-dim-in .22s ease both;}
-.help-layer.closing .help-dim{animation:help-dim-out .24s ease both;}
-.help-panel{position:absolute;top:0;right:0;bottom:0;width:440px;z-index:1;background:var(--panel);
-  border-left:1px solid var(--line);box-shadow:-24px 0 60px -30px rgba(0,0,0,.4);
-  display:flex;flex-direction:column;animation:help-slide-in .28s cubic-bezier(.22,.61,.36,1) both;}
-.help-layer.closing .help-panel{animation:help-slide-out .26s cubic-bezier(.4,0,.85,.4) both;}
-@keyframes help-dim-in{from{opacity:0;}to{opacity:1;}}
-@keyframes help-dim-out{from{opacity:1;}to{opacity:0;}}
-@keyframes help-slide-in{from{transform:translateX(100%);}to{transform:translateX(0);}}
-@keyframes help-slide-out{from{transform:translateX(0);}to{transform:translateX(100%);}}
+/* index column — fixed width; the detail pane absorbs any extra */
+.htab-index{flex:0 0 430px;min-width:0;min-height:0;display:flex;flex-direction:column;
+  background:var(--panel);border-right:1px solid var(--line);}
+.htab-index-head{padding:20px 22px 14px;}
+.htab-h{margin:0 0 12px;font-family:'Inter Tight',sans-serif;font-weight:700;font-size:25px;
+  letter-spacing:-.03em;text-transform:lowercase;color:var(--ink);}
+.htab-search{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:11px;
+  border:1px solid var(--htab-input);background:var(--htab-field);}
+.htab-search-icon{width:14px;height:14px;flex:0 0 14px;color:var(--faint);}
+.htab-search-input{flex:1;min-width:0;border:0;background:transparent;outline:none;
+  font-family:inherit;font-size:13.5px;color:var(--ink);}
+.htab-search-input::placeholder{color:var(--htab-faint-2);}
+.htab-count{flex:0 0 auto;font-size:11px;color:var(--htab-faint-2);white-space:nowrap;}
+.htab-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+.htab-chip{flex:0 0 auto;white-space:nowrap;border:1px solid var(--htab-input);background:var(--panel);
+  color:var(--ink-3);border-radius:999px;padding:5px 11px;font-size:11.5px;font-family:inherit;
+  text-transform:lowercase;cursor:pointer;transition:border-color .14s,color .14s;}
+.htab-chip:hover{border-color:var(--faint);color:var(--ink-2);}
+.htab-chip.on{background:var(--ink);border-color:var(--ink);color:var(--pill-text);}
 
-.help-head{position:relative;padding:23px 24px 17px;border-bottom:1px solid var(--line-2);}
-.help-eyebrow{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);}
-.help-title{margin:5px 0 0;font-family:'Inter Tight',inherit;font-weight:700;font-size:21px;
-  letter-spacing:-.02em;text-transform:lowercase;color:var(--ink);}
-.help-x{position:absolute;top:20px;right:20px;width:28px;height:28px;display:inline-flex;align-items:center;
-  justify-content:center;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--faint);
-  font-size:13px;line-height:0;cursor:pointer;transition:color .14s,border-color .14s;}
-.help-x:hover{color:var(--ink);border-color:var(--ink-3);}
+/* index list */
+.htab-list{flex:1;min-height:0;overflow-y:auto;padding:2px 14px 18px;}
+.htab-group{padding:8px 8px 6px;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--htab-faint-2);}
+.htab-row{display:flex;align-items:flex-start;gap:11px;width:100%;text-align:left;border:0;
+  background:transparent;border-radius:12px;padding:10px;cursor:pointer;font-family:inherit;
+  transition:background .14s;}
+.htab-row:hover{background:var(--htab-hover);}
+.htab-row.on{background:var(--htab-sel);}
+.htab-tile{flex:0 0 30px;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;background:var(--hush);color:var(--ink-2);transition:background .14s,color .14s;}
+.htab-row.on .htab-tile{background:var(--ink);color:#fff;}
+.htab-tile-sym{width:15px;height:15px;}
+.htab-row-main{min-width:0;display:flex;flex-direction:column;gap:1px;}
+.htab-row-t{font-size:13.5px;font-weight:600;text-transform:lowercase;color:var(--ink);}
+/* copy is written to fit; the ellipsis is a safety net, not a design element */
+.htab-row-s{font-size:12.5px;line-height:1.5;color:var(--htab-muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.htab-empty{padding:26px 12px;text-align:center;}
+.htab-empty-t{font-size:13.5px;color:var(--htab-muted);text-transform:lowercase;}
+.htab-empty-btn{margin-top:6px;padding:2px;border:0;background:transparent;color:var(--accent);
+  font-size:12.5px;font-family:inherit;text-transform:lowercase;cursor:pointer;}
+.htab-empty-btn:hover{text-decoration:underline;}
 
-.help-body{flex:1;overflow-y:auto;min-height:0;padding:18px 24px;}
-.help-lead{margin:0 0 18px;font-size:13.5px;line-height:1.6;color:var(--ink-3);}
-.help-feat{display:flex;gap:13px;padding:14px 0;border-top:1px solid #f0efeb;}
-.help-num{flex:0 0 26px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;
-  border-radius:8px;background:var(--pill);color:var(--pill-text);font-size:11px;font-weight:500;
-  font-family:ui-monospace,'SF Mono',Menlo,monospace;}
-.help-feat-main{min-width:0;}
-.help-feat-t{font-size:13.5px;font-weight:600;text-transform:lowercase;color:var(--ink);}
-.help-feat-d{margin-top:3px;font-size:12.5px;line-height:1.56;color:#7a766e;}
-.help-foot{margin-top:18px;padding:12px 14px;background:var(--hush);border-radius:11px;
-  font-size:12px;line-height:1.5;color:#8a857c;text-transform:lowercase;}
+/* detail pane */
+.htab-detail{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:24px 30px 26px;background:var(--canvas);}
+.htab-eyebrow{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--htab-faint);}
+.htab-title{margin:6px 0 9px;font-family:'Inter Tight',sans-serif;font-weight:700;font-size:29px;
+  letter-spacing:-.03em;text-transform:lowercase;color:var(--ink);}
+.htab-desc{margin:0 0 18px;max-width:600px;font-size:14.5px;line-height:1.62;color:var(--htab-ink-2);
+  text-wrap:pretty;}
 
-.help-footer{padding:13px 24px;border-top:1px solid var(--line-2);font-size:11.5px;
-  color:#b4b1a8;text-transform:lowercase;}
+/* wireframe preview — a schematic of the screen, not a screenshot */
+/* capped rather than full-bleed, so the eyebrow, description, preview and
+ * the primary button all sit on screen together without the pane scrolling */
+.htab-wire{position:relative;width:100%;max-width:min(640px,calc(48vh * 1.6));
+  aspect-ratio:16/10;background:var(--panel);
+  border:1px solid var(--htab-input);border-radius:14px;overflow:hidden;
+  box-shadow:0 18px 40px -30px rgba(17,17,17,.5);}
+.htab-wire-band{position:absolute;left:0;right:0;top:0;height:9%;background:#f7f6f3;
+  border-bottom:1px solid var(--htab-hair);}
+.htab-wire-rail{position:absolute;left:0;top:9%;bottom:0;width:24%;border-right:1px solid var(--htab-hair);}
+.htab-bar{position:absolute;border-radius:3px;background:#e6e4dd;}
+.htab-bar.t-dim{background:var(--htab-hair);}
+.htab-bar.t-dark{background:#dcdad3;}
+.htab-bar.t-title{background:#e0ded7;}
+.htab-bar.t-block{background:#f4f3ef;border-radius:8px;}
+.htab-bar.t-box{background:#fbfaf7;border:1px solid var(--htab-hair);border-radius:8px;}
+/* the one animation in the design: the rectangle glides between features,
+ * which is what makes the schematic legible as a map */
+.htab-hl{position:absolute;border:2px solid var(--accent);border-radius:9px;
+  background:rgba(188,95,60,.09);box-shadow:0 0 0 4px rgba(188,95,60,.10);
+  transition:all .3s cubic-bezier(.22,1,.36,1);}
+.htab-hl-chip{position:absolute;left:0;top:-24px;padding:3px 8px;border-radius:6px;
+  background:var(--accent);color:#fff;font-size:10.5px;text-transform:lowercase;white-space:nowrap;}
+/* a region up in the top bar has no room above it, so the chip drops below;
+ * one that also reaches the floor has room for neither and tucks inside */
+.htab-hl-chip.below{top:auto;bottom:-24px;}
+.htab-hl-chip.inside{top:5px;left:5px;}
+.htab-hl-chip.right{left:auto;right:0;}
+.htab-hl-chip.inside.right{right:5px;}
 
+.htab-actions{margin-top:18px;display:flex;align-items:center;gap:9px;}
+.htab-cta{border:0;background:var(--ink);color:var(--pill-text);border-radius:11px;padding:9px 16px;
+  font-size:13px;font-family:inherit;text-transform:lowercase;cursor:pointer;transition:background .14s;}
+.htab-cta:hover{background:var(--accent);}
+
+/* The index column never shrinks — the detail pane absorbs the extra width.
+ * At 880px the whole app drops out of the fixed-height flex model into normal
+ * document flow (see the shell rules above), so help follows it: the two panes
+ * stack and scroll with the page rather than scrolling internally. */
 @media (max-width:880px){
-  .help-panel{width:min(440px,88vw);}
+  .htab{display:block;}
+  .htab-index{border-right:0;border-bottom:1px solid var(--line);}
+  .htab-list{overflow:visible;}
+  .htab-detail{overflow:visible;padding:20px 18px 28px;}
+  .htab-wire{max-width:100%;}
 }

@@ -96,6 +96,231 @@ export function Sym({ name, className }) {
   }
 }
 
+/* ------------------------------------------------------------------ *
+ *  help-index glyphs — one per feature entry in the help tab.
+ *
+ *  Same 40×40 geometric language as Sym, but fill/stroke are bound to
+ *  currentColor: the help index inverts the icon tile when a row is
+ *  selected (dark tile, light glyph), which the nav glyphs never do.
+ * ------------------------------------------------------------------ */
+export function HelpSym({ name, className }) {
+  const p = { viewBox: "0 0 40 40", className, fill: "currentColor", "aria-hidden": true };
+  // shorthand for the stroked half of the set
+  const s = { fill: "none", stroke: "currentColor", strokeWidth: 3, strokeLinecap: "round", strokeLinejoin: "round" };
+  switch (name) {
+    /* ---- general ---- */
+    case "switch":
+      return <svg {...p}><path {...s} strokeWidth="3.4" d="M7 15h22l-6.5-6.5M33 25H11l6.5 6.5" /></svg>;
+    case "menu":
+      return (
+        <svg {...p}>
+          <rect x="6" y="11" width="28" height="4.4" rx="2.2" />
+          <rect x="6" y="18" width="28" height="4.4" rx="2.2" />
+          <rect x="6" y="25" width="17" height="4.4" rx="2.2" />
+        </svg>
+      );
+    case "save":
+      return <svg {...p}><path d="M13.5 31a8.5 8.5 0 0 1-.8-16.9 10.5 10.5 0 0 1 20 2.6A7.2 7.2 0 0 1 30.5 31z" /></svg>;
+    case "mobile":
+      return (
+        <svg {...p}>
+          <rect {...s} x="12" y="4.5" width="16" height="31" rx="4.4" />
+          <rect x="17" y="29" width="6" height="2.6" rx="1.3" />
+        </svg>
+      );
+
+    /* ---- scenario ---- */
+    case "scenario":
+      return (
+        <svg {...p}>
+          <path d="M19 11C13.5 8.2 8 8.2 4 10.4v18.4c4-2.2 9.5-2.2 15 .6z" />
+          <path d="M21 11c5.5-2.8 11-2.8 15-.6v18.4c-4-2.2-9.5-2.2-15 .6z" />
+        </svg>
+      );
+    case "read":
+      return (
+        <svg {...p}>
+          <rect {...s} x="5" y="8" width="30" height="20" rx="4.4" />
+          <path d="M12.5 27h9l-9 8z" />
+        </svg>
+      );
+    case "check":
+      return <svg {...p}><path {...s} strokeWidth="4.2" d="M8.5 21l8 8L31.5 11" /></svg>;
+    case "link":
+      return (
+        <svg {...p}>
+          <path {...s} strokeWidth="3.4" d="M16.5 23.5l7-7" />
+          <path {...s} strokeWidth="3.4" d="M21.5 12.5l2.8-2.8a6.6 6.6 0 0 1 9.3 9.3l-2.8 2.8" />
+          <path {...s} strokeWidth="3.4" d="M18.5 27.5l-2.8 2.8a6.6 6.6 0 0 1-9.3-9.3l2.8-2.8" />
+        </svg>
+      );
+    case "map":
+      return (
+        <svg {...p}>
+          <path fillRule="evenodd" clipRule="evenodd" d="M20 3.5c-6.2 0-11.2 5-11.2 11.2C8.8 23.2 20 36.5 20 36.5S31.2 23.2 31.2 14.7C31.2 8.5 26.2 3.5 20 3.5zm0 15.4a4.2 4.2 0 1 0 0-8.4 4.2 4.2 0 0 0 0 8.4z" />
+        </svg>
+      );
+
+    /* ---- encounters ---- */
+    case "combat":
+      return <svg {...p}><path d="M20 3l13 5v9c0 9-5.6 15-13 20C12.6 32 7 26 7 17V8z" /></svg>;
+    case "initiative":
+      return (
+        <svg {...p}>
+          <rect x="6" y="8" width="28" height="4.6" rx="2.3" />
+          <rect x="6" y="17.7" width="21" height="4.6" rx="2.3" />
+          <rect x="6" y="27.4" width="13" height="4.6" rx="2.3" />
+        </svg>
+      );
+    case "list":
+      return (
+        <svg {...p}>
+          <circle cx="9" cy="10.5" r="3" /><rect x="16" y="8.2" width="18" height="4.6" rx="2.3" />
+          <circle cx="9" cy="20" r="3" /><rect x="16" y="17.7" width="18" height="4.6" rx="2.3" />
+          <circle cx="9" cy="29.5" r="3" /><rect x="16" y="27.2" width="18" height="4.6" rx="2.3" />
+        </svg>
+      );
+    case "plus":
+      return <svg {...p}><path {...s} strokeWidth="4.4" d="M20 7.5v25M7.5 20h25" /></svg>;
+    case "heart":
+      return <svg {...p}><path d="M20 34.5S5.5 25.4 5.5 16A7.8 7.8 0 0 1 20 11.6 7.8 7.8 0 0 1 34.5 16c0 9.4-14.5 18.5-14.5 18.5z" /></svg>;
+    case "condition":
+      return (
+        <svg {...p}>
+          <path {...s} d="M20 4l13.5 7.8v16.4L20 36 6.5 28.2V11.8z" />
+          <circle cx="20" cy="20" r="4.6" />
+        </svg>
+      );
+    case "stepper":
+      return (
+        <svg {...p}>
+          <rect {...s} x="3.5" y="13" width="33" height="14" rx="7" />
+          <path {...s} strokeWidth="2.8" d="M9.5 20h4.6M25.9 20h4.6M28.2 17.7v4.6" />
+        </svg>
+      );
+    case "dots":
+      return <svg {...p}><circle cx="10.5" cy="20" r="3.6" /><circle cx="20" cy="20" r="3.6" /><circle cx="29.5" cy="20" r="3.6" /></svg>;
+    case "effect":
+      return (
+        <svg {...p}>
+          <path d="M17 4.5l3.2 8.8 8.8 3.2-8.8 3.2L17 28.5l-3.2-8.8L5 16.5l8.8-3.2z" />
+          <path d="M29.5 24l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z" />
+        </svg>
+      );
+    case "select":
+      return (
+        <svg {...p}>
+          <rect {...s} x="5.5" y="5.5" width="29" height="29" rx="6.4" />
+          <path {...s} strokeWidth="3.6" d="M12.5 20.5l5.2 5.2 9.8-11.4" />
+        </svg>
+      );
+    case "die":
+      return (
+        <svg {...p}>
+          <path {...s} d="M20 3.5l14.2 8.2v16.6L20 36.5 5.8 28.3V11.7z" />
+          <path d="M20 11.5l7.2 12.4H12.8z" />
+        </svg>
+      );
+    case "edit":
+      return (
+        <svg {...p}>
+          <path d="M28.4 5.6l6 6-3.7 3.7-6-6z" />
+          <path d="M22.6 11.4l6 6L13.9 32.1 5.6 34.4l2.3-8.3z" />
+        </svg>
+      );
+    case "threat":
+      return (
+        <svg {...p}>
+          <path {...s} strokeWidth="3.4" d="M6 28a14 14 0 0 1 28 0" />
+          <path {...s} strokeWidth="3.4" d="M20 28l8.5-9.5" />
+          <circle cx="20" cy="28" r="3.2" />
+        </svg>
+      );
+    case "round":
+      return (
+        <svg {...p}>
+          <path {...s} strokeWidth="3.6" d="M33.5 20a13.5 13.5 0 1 1-5.2-10.7" />
+          <path d="M34.5 5.5v9.5H25z" />
+        </svg>
+      );
+    case "log":
+      return (
+        <svg {...p}>
+          <rect {...s} x="7.5" y="7" width="25" height="28" rx="4.4" />
+          <rect x="14.5" y="3.5" width="11" height="6.4" rx="3.2" />
+          <path {...s} d="M14 19h12M14 26h8" />
+        </svg>
+      );
+
+    /* ---- characters ---- */
+    case "party":
+      return (
+        <svg {...p}>
+          <circle cx="14" cy="14" r="6" />
+          <circle cx="27" cy="17" r="4.6" />
+          <path d="M4 34c0-6 4.6-9.5 10-9.5S24 28 24 34z" />
+          <path d="M23 34c.4-4.6 3.4-7.4 7.2-7.4 3.6 0 6.3 2.6 6.8 7.4z" />
+        </svg>
+      );
+    case "npc":
+      return <svg {...p}><circle cx="20" cy="13" r="7.2" /><path d="M6 35.5c0-7.6 6.3-12.4 14-12.4s14 4.8 14 12.4z" /></svg>;
+    case "companion":
+      return <svg {...p}><path d="M20 4l12 16-12 16L8 20z" /></svg>;
+    case "book":
+      return (
+        <svg {...p}>
+          <rect {...s} x="8.5" y="4.5" width="23" height="31" rx="4" />
+          <path d="M16.5 4.5h7.6v13.4L20.3 15l-3.8 2.9z" />
+        </svg>
+      );
+    case "import":
+      return (
+        <svg {...p}>
+          <path {...s} strokeWidth="3.4" d="M20 4.5v19M12 15.5l8 8 8-8" />
+          <path {...s} strokeWidth="3.4" d="M6.5 28.5v3.4a3.6 3.6 0 0 0 3.6 3.6h19.8a3.6 3.6 0 0 0 3.6-3.6v-3.4" />
+        </svg>
+      );
+    case "export":
+      return (
+        <svg {...p}>
+          <path {...s} strokeWidth="3.4" d="M20 23.5v-19M12 12.5l8-8 8 8" />
+          <path {...s} strokeWidth="3.4" d="M6.5 28.5v3.4a3.6 3.6 0 0 0 3.6 3.6h19.8a3.6 3.6 0 0 0 3.6-3.6v-3.4" />
+        </svg>
+      );
+
+    /* ---- gm notes ---- */
+    case "pages":
+      return (
+        <svg {...p}>
+          <path d="M7.5 5h13.8l8.2 8.2v20.3a2 2 0 0 1-2 2H7.5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
+          <path {...s} d="M34.5 12.5v20.8a4 4 0 0 1-4 4H14" />
+        </svg>
+      );
+    case "mode":
+      return <svg {...p}><rect {...s} x="3.5" y="12" width="33" height="16" rx="8" /><circle cx="27.5" cy="20" r="4.8" /></svg>;
+    case "blocks":
+      return (
+        <svg {...p}>
+          <rect x="5.5" y="6.5" width="29" height="7.4" rx="2.6" />
+          <rect {...s} strokeWidth="2.8" x="5.5" y="16.3" width="29" height="7.4" rx="2.6" />
+          <rect x="5.5" y="26.1" width="18" height="7.4" rx="2.6" />
+        </svg>
+      );
+    case "clock":
+      return <svg {...p}><circle {...s} cx="20" cy="20" r="14.5" /><path {...s} d="M20 10.5v10l6.6 4.2" /></svg>;
+    case "search":
+      return (
+        <svg {...p}>
+          <circle {...s} strokeWidth="3.2" cx="17.5" cy="17.5" r="10.6" />
+          <path {...s} strokeWidth="3.8" d="M25.4 25.4L34 34" />
+        </svg>
+      );
+
+    default:
+      return <svg {...p}><circle cx="20" cy="20" r="6" /></svg>;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /*  symbol-logos — bold geometric marks, one visual weight            */
 /*  (the brand's primary visual language: black on off-white)         */

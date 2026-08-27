@@ -10,7 +10,8 @@ import { ScenarioView } from "./components/scenario.jsx";
 import { EncountersView } from "./components/encounters.jsx";
 import { EncNavProvider, EncounterRail } from "./components/encrail.jsx";
 import { GmNotes } from "./components/gmnotes.jsx";
-import { HelpCorner, HelpPanel } from "./components/help.jsx";
+import { HelpTab } from "./components/helptab.jsx";
+import { HELP_INDEX, HELP_TABS } from "./data/help-index.js";
 
 /* ------------------------------------------------------------------ *
  *  Persistence
@@ -112,6 +113,10 @@ export function BinderApp({ onRequestMobile }) {
     () => MANAGERS.filter((m) => m.id !== "scenario" || !isCustom),
     [isCustom]
   );
+  // Help mirrors that: a custom adventure has no scenario tab, so its help
+  // entries would advertise a workspace the user can't reach.
+  const helpTabs = useMemo(() => HELP_TABS.filter((t) => t.id !== "scenario" || !isCustom), [isCustom]);
+  const helpEntries = useMemo(() => HELP_INDEX.filter((e) => e.tab !== "scenario" || !isCustom), [isCustom]);
   const picked = workspace ?? (isCustom ? "gmnotes" : "characters");
   const effWorkspace = isCustom && picked === "scenario" ? "gmnotes" : picked;
   const [activePc, setActivePc] = useState(null);
@@ -378,6 +383,31 @@ export function BinderApp({ onRequestMobile }) {
   const goScen = (id) => { setScenSection(id); setNavOpen(false); };
   const switchTo = (w) => { setWorkspace(w); setNavOpen(false); };
 
+  // Help's "open it in the … tab" button. Where the app already tracks the
+  // state a feature lives in, land on it rather than dropping the user at the
+  // top of the tab to hunt for it again.
+  const goHelp = useCallback(
+    (target) => {
+      setHelpOpen(false);
+      if (!target) return;
+      if (target.tab === "scenario" && target.scen) setScenSection(target.scen);
+      if (target.tab === "characters") {
+        setAdding(!!target.add);
+        if (!target.add) {
+          setNpcSel(null);
+          // the companion section's pill only exists for a PC that has one —
+          // don't strand the sheet on a section it won't render
+          if (target.section && (target.section !== "companion" || pc?.pets.length)) {
+            setSection(target.section);
+          }
+        }
+      }
+      setWorkspace(target.tab);
+      setNavOpen(false);
+    },
+    [pc]
+  );
+
   const crumbNow =
     effWorkspace === "characters"
       ? adding
@@ -417,8 +447,8 @@ export function BinderApp({ onRequestMobile }) {
             {visibleManagers.map((m) => (
               <button
                 key={m.id}
-                className={`ms-btn ${effWorkspace === m.id ? "on" : ""}`}
-                onClick={() => switchTo(m.id)}
+                className={`ms-btn ${!helpOpen && effWorkspace === m.id ? "on" : ""}`}
+                onClick={() => { setHelpOpen(false); switchTo(m.id); }}
               >
                 <span className="ms-box"><Sym name={m.sym} className="ms-sym" /></span>
                 <span>{m.label}</span>
@@ -454,6 +484,14 @@ export function BinderApp({ onRequestMobile }) {
                 <option value="__new__">+ new custom scenario…</option>
               </select>
             )}
+            <button
+              className={`dock-help ${helpOpen ? "on" : ""}`}
+              onClick={() => setHelpOpen((v) => !v)}
+              title="what this app can do"
+            >
+              <span className="dock-help-q">?</span>
+              help
+            </button>
           </div>
         </div>
 
@@ -466,7 +504,15 @@ export function BinderApp({ onRequestMobile }) {
       </div>
 
       <div className={`app ${dockLocked ? "docked" : ""}`}>
-        {effWorkspace === "gmnotes" ? (
+        {helpOpen ? (
+          <HelpTab
+            tabs={helpTabs}
+            entries={helpEntries}
+            fromTab={effWorkspace}
+            onGo={goHelp}
+            onClose={() => setHelpOpen(false)}
+          />
+        ) : effWorkspace === "gmnotes" ? (
           // GmNotes snapshots its content from initialPages once per mount, so it
           // must not mount until the loaded overlay belongs to the active scenario.
           // After a switch, activeId flips synchronously while the overlay loads
@@ -642,10 +688,6 @@ export function BinderApp({ onRequestMobile }) {
         </main>
         </EncNavProvider>
         )}
-
-        {/* per-tab contextual help — quiet corner trigger + slide-over */}
-        <HelpCorner onClick={() => setHelpOpen(true)} />
-        {helpOpen && <HelpPanel tab={effWorkspace} onClose={() => setHelpOpen(false)} />}
       </div>
 
       {addNpcOpen && <AddNpc onAdd={addCustomNpc} onClose={() => setAddNpcOpen(false)} />}
