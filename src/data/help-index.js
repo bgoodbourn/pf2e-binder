@@ -70,9 +70,11 @@ export const HELP_INDEX = [
     sym: "save",
     r: [24, 11, 74, 82],
     desc:
-      "every change is saved automatically to this browser's local storage. there is no save " +
-      "button. if cloud sync is configured, changes are also backed up online and shared between " +
-      "your devices. when the same scenario is edited in two places, the most recent change wins.",
+      "changes save automatically as you make them. there is no save button. your work is stored " +
+      "in this browser, so the binder works offline. if cloud backup is configured, changes are " +
+      "also copied to the cloud a couple of seconds after you stop editing, and again when you " +
+      "close the tab. where the same scenario has been edited on two devices, the most recent " +
+      "change wins.",
   },
   {
     id: "mobile-view",
