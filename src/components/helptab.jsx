@@ -234,7 +234,7 @@ export function HelpTab({ tabs, entries, fromTab, onGo, onClose }) {
               className="htab-search-input"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="search features — initiative, conditions, hp…"
+              placeholder="search"
               aria-label="search features"
             />
             <span className="htab-count">{matches.length} of {entries.length}</span>

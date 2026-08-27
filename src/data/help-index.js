@@ -54,7 +54,7 @@ export const HELP_INDEX = [
     id: "menu-bar",
     tab: "general",
     title: "menu bar",
-    short: "the top bar hides itself; hover the top edge to show it",
+    short: "the top bar hides itself - hover the top edge to show it",
     sym: "menu",
     r: [1, 1, 98, 7],
     desc:
@@ -72,7 +72,7 @@ export const HELP_INDEX = [
     desc:
       "every change is saved automatically to this browser's local storage. there is no save " +
       "button. if cloud sync is configured, changes are also backed up online and shared between " +
-      "your devices; when the same scenario is edited in two places, the most recent change wins.",
+      "your devices. when the same scenario is edited in two places, the most recent change wins.",
   },
   {
     id: "mobile-view",
@@ -205,7 +205,7 @@ export const HELP_INDEX = [
     desc:
       "“+ add player” lists your imported characters and their animal companions. “+ add npc” " +
       "lists scenario and custom npcs that have combat stats. “+ add creature” searches a bestiary " +
-      "by name, family, or trait; arrow keys move and enter adds. “add custom” opens a form for " +
+      "by name, family, or trait. arrow keys move and enter adds. “add custom” opens a form for " +
       "entering a combatant by hand. “clear” removes every combatant, immediately and without " +
       "confirmation.",
   },
@@ -286,7 +286,7 @@ export const HELP_INDEX = [
     go: { tab: "encounters" },
     desc:
       "the “select” button switches to selection mode. click rows to select them, or use the " +
-      "“all”, “enemies”, and “pcs” shortcuts; “pcs” includes animal companions. “+ condition” " +
+      "“all”, “enemies”, and “pcs” shortcuts. “pcs” includes animal companions. “+ condition” " +
       "and “+ effect” then apply to every selected combatant in one step.",
   },
   {
@@ -376,7 +376,7 @@ export const HELP_INDEX = [
     go: { tab: "encounters" },
     desc:
       "an animal companion added to an encounter is placed directly under its owner and has no " +
-      "initiative of its own; it acts on the owner's turn. if the owner is removed from the " +
+      "initiative of its own. it acts on the owner's turn. if the owner is removed from the " +
       "encounter, the companion takes its own place in the order.",
   },
 
@@ -470,7 +470,7 @@ export const HELP_INDEX = [
     r: [1.5, 10, 21, 86],
     go: { tab: "gmnotes" },
     desc:
-      "the pages rail lists your pages in running order. “+ add page” creates a page; the + on a " +
+      "the pages rail lists your pages in running order. “+ add page” creates a page. the + on a " +
       "page creates a fork indented under it. drag pages to reorder, and a fork will move with the " +
       "parent. deleting a page also deletes its forks.",
   },
