@@ -500,7 +500,8 @@ export const HELP_INDEX = [
       "the + between blocks inserts a section heading, paragraph, read-aloud box, skill check, q&a " +
       "table, or linked entities block. skill check blocks hold the type of check, a dc, a " +
       "secret/open toggle, and text for all four outcomes. q&a tables hold questions you expect " +
-      "the players to ask and your prepared answers.",
+      "the players to ask and your prepared answers. click + add row at the bottom of a q&a " +
+      "table for another question, or the ✕ on a row to remove it.",
   },
   {
     id: "live-notes",

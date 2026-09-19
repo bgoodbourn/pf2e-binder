@@ -543,9 +543,27 @@ export function GmNotes({ initialPages, onPersist, npcs = [], encounters = [], o
                 <div className="gmn-qarow" key={ri}>
                   <GmEditable tag="dt" editable={editable} placeholder="the question…" value={row.q} onText={(x) => { row.q = x; save(pages, false); }} />
                   <GmEditable tag="dd" editable={editable} placeholder="your answer / what to reveal…" value={row.a} onText={(x) => { row.a = x; save(pages, false); }} />
+                  {isPrep && b.rows.length > 1 && (
+                    <button className="gmn-qarow-del" title="remove row" onClick={(e) => { e.stopPropagation(); b.rows.splice(ri, 1); commitStructural(); }}>✕</button>
+                  )}
                 </div>
               ))}
             </dl>
+            {isPrep && (
+              <button
+                className="gmn-qa-add"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const dl = e.currentTarget.previousElementSibling;
+                  b.rows.push({ q: "", a: "" });
+                  commitStructural();
+                  // drop the cursor into the new question once it has rendered
+                  requestAnimationFrame(() => dl.lastElementChild?.querySelector("dt")?.focus());
+                }}
+              >
+                + add row
+              </button>
+            )}
           </div>
         );
       case "links":
