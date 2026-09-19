@@ -108,6 +108,7 @@ function GmLinkPicker({ npcs, encounters, pageEntries, onPick, onClose }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [url, setUrl] = useState("");
+  const [urlLabel, setUrlLabel] = useState("");
   const [highlight, setHighlight] = useState(0);
   const inputRef = useRef(null);
   const urlRef = useRef(null);
@@ -141,7 +142,7 @@ function GmLinkPicker({ npcs, encounters, pageEntries, onPick, onClose }) {
 
   const setQ = (v) => { setQuery(v); setHighlight(0); };
   const setF = (k) => { setFilter(k); setHighlight(0); };
-  const linkUrl = () => { const u = url.trim(); if (u) onPick({ type: "url", name: u, url: u }); };
+  const linkUrl = () => { const u = url.trim(); if (u) onPick({ type: "url", name: urlLabel.trim() || u, url: u }); };
 
   const onKey = (e) => {
     if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
@@ -174,6 +175,9 @@ function GmLinkPicker({ npcs, encounters, pageEntries, onPick, onClose }) {
           <div className="gmn-lp-urlrow">
             <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="oklch(0.55 0.13 310)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="5.6" /><path d="M2.6 8h10.8M8 2.4c1.7 1.8 1.7 9.4 0 11.2M8 2.4c-1.7 1.8-1.7 9.4 0 11.2" /></svg>
             <input ref={urlRef} value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={onKey} placeholder="https://…" />
+          </div>
+          <div className="gmn-lp-urlrow gmn-lp-urlname">
+            <input value={urlLabel} onChange={(e) => setUrlLabel(e.target.value)} onKeyDown={onKey} placeholder="label (optional)" />
           </div>
           <button className="gmn-lp-urlbtn" disabled={!url.trim()} onClick={linkUrl}>link this url</button>
         </div>
