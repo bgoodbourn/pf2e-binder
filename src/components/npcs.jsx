@@ -2,10 +2,10 @@
  *  NPC components
  *
  *  The "add NPC" modal (quick name+description or a full stat block) and the
- *  NPC sheet renderer. Parse helpers below normalize the free-text full form
- *  into structured fields.
+ *  NPC sheet renderer, whose description / role text is click-to-edit. Parse
+ *  helpers below normalize the free-text full form into structured fields.
  * ==================================================================== */
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { sign, ABILITIES } from "../lib/pf2e.js";
 import { Sym } from "./icons.jsx";
 import { Stat, NotesBox } from "./party.jsx";
@@ -162,7 +162,66 @@ export function AddNpc({ onAdd, onClose }) {
   );
 }
 
-export function NpcSheet({ npc, note, onNote, onRemove }) {
+/* click-to-edit paragraph: reads as plain text, becomes an auto-growing
+ * textarea in place. blur or ⌘/ctrl+enter saves, esc cancels. */
+function EditableText({ value, onCommit, className, placeholder, ariaLabel }) {
+  const [draft, setDraft] = useState(null); // null = not editing
+  const ref = useRef(null);
+  const skipBlur = useRef(false);
+  const editing = draft != null;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
+  });
+  useEffect(() => {
+    const el = ref.current;
+    if (editing && el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  }, [editing]);
+
+  const start = () => { skipBlur.current = false; setDraft(value || ""); };
+  const commit = () => {
+    if (draft == null) return;
+    const t = draft.trim();
+    if (t !== (value || "")) onCommit(t);
+    setDraft(null);
+  };
+  const cancel = () => { skipBlur.current = true; setDraft(null); };
+
+  if (!editing) {
+    return (
+      <p
+        className={`${className} npc-edit${value ? "" : " empty"}`}
+        role="button"
+        tabIndex={0}
+        aria-label={ariaLabel}
+        title="click to edit"
+        onClick={start}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); start(); } }}
+      >
+        {value || placeholder}
+      </p>
+    );
+  }
+  return (
+    <textarea
+      ref={ref}
+      className={`${className} npc-edit npc-edit-area`}
+      rows={1}
+      value={draft}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => { if (skipBlur.current) skipBlur.current = false; else commit(); }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") { e.preventDefault(); cancel(); }
+        else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); commit(); }
+      }}
+    />
+  );
+}
+
+export function NpcSheet({ npc, note, onNote, onEditText, onResetText, onRemove }) {
   const v = (x) => (x == null ? "?" : x);
   const sv = (x) => (x == null ? "?" : sign(x));
   const eyebrow = [npc.role, npc.source].filter(Boolean).join(" · ");
@@ -178,7 +237,12 @@ export function NpcSheet({ npc, note, onNote, onRemove }) {
         </div>
         <div className="pc-head-right">
           <NotesBox value={note} onChange={onNote} />
-          {onRemove && <div className="pc-actions"><button className="mini danger" onClick={onRemove}>remove</button></div>}
+          {(onResetText || onRemove) && (
+            <div className="pc-actions">
+              {onResetText && <button className="mini" onClick={onResetText} title="restore the scenario's original description and role">reset text</button>}
+              {onRemove && <button className="mini danger" onClick={onRemove}>remove</button>}
+            </div>
+          )}
         </div>
       </div>
 
@@ -186,12 +250,21 @@ export function NpcSheet({ npc, note, onNote, onRemove }) {
         <div className="chips npc-traits">{npc.traits.map((t) => <span key={t} className="chip ghost">{t}</span>)}</div>
       )}
 
-      {npc.description && <p className="npc-desc">{npc.description}</p>}
-
-      {npc.notes && (
+      {onEditText ? (
         <>
+          <EditableText key={`${npc.id}:description`} className="npc-desc" value={npc.description} onCommit={(t) => onEditText("description", t)} placeholder="add a description…" ariaLabel="description" />
           <h3 className="sheet-h">role</h3>
-          <p className="sec-p">{npc.notes}</p>
+          <EditableText key={`${npc.id}:notes`} className="sec-p" value={npc.notes} onCommit={(t) => onEditText("notes", t)} placeholder="add role / tactics…" ariaLabel="role" />
+        </>
+      ) : (
+        <>
+          {npc.description && <p className="npc-desc">{npc.description}</p>}
+          {npc.notes && (
+            <>
+              <h3 className="sheet-h">role</h3>
+              <p className="sec-p">{npc.notes}</p>
+            </>
+          )}
         </>
       )}
 

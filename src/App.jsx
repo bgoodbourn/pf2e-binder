@@ -6,6 +6,7 @@ import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters, orderComba
 import { Sym, ScenSym } from "./components/icons.jsx";
 import { Sheet, Importer, NotesBox, NewScenario } from "./components/party.jsx";
 import { AddNpc, NpcSheet } from "./components/npcs.jsx";
+import { applyNpcEdits, setNpcEdit } from "./lib/npcs.js";
 import { ScenarioView } from "./components/scenario.jsx";
 import { EncountersView } from "./components/encounters.jsx";
 import { EncNavProvider, EncounterRail } from "./components/encrail.jsx";
@@ -228,6 +229,26 @@ export function BinderApp({ onRequestMobile }) {
     [patch, overlay.customNpcs]
   );
 
+  // Edit an NPC's description / role text. Custom NPCs are edited in place;
+  // base scenario NPCs get an override in overlay.npcEdits (the base is immutable).
+  const editNpcText = useCallback(
+    (id, field, text) => {
+      const base = (S?.npcs || []).find((n) => n.id === id);
+      if (base) patch({ npcEdits: setNpcEdit(overlay.npcEdits, base, field, text) });
+      else patch({ customNpcs: (overlay.customNpcs || []).map((n) => (n.id === id ? { ...n, [field]: text } : n)) });
+    },
+    [patch, S, overlay.npcEdits, overlay.customNpcs]
+  );
+
+  const resetNpcText = useCallback(
+    (id) => {
+      const next = { ...(overlay.npcEdits || {}) };
+      delete next[id];
+      patch({ npcEdits: next });
+    },
+    [patch, overlay.npcEdits]
+  );
+
   // Encounters are persisted with seeded maps stripped (rehydrated on read).
   const writeEncounters = useCallback(
     (list) => patch({ encounters: stripSeededMaps(list, S?.encounters) }),
@@ -361,7 +382,10 @@ export function BinderApp({ onRequestMobile }) {
     URL.revokeObjectURL(url);
   };
 
-  const allNpcs = useMemo(() => [...(S?.npcs || []), ...(overlay.customNpcs || [])], [S, overlay.customNpcs]);
+  const allNpcs = useMemo(
+    () => [...applyNpcEdits(S?.npcs, overlay.npcEdits), ...(overlay.customNpcs || [])],
+    [S, overlay.npcEdits, overlay.customNpcs]
+  );
   const pc = useMemo(() => pcs.find((p) => p.id === effPcId) || null, [pcs, effPcId]);
   const npc = useMemo(() => allNpcs.find((n) => n.id === npcSel) || null, [allNpcs, npcSel]);
   const encounter = useMemo(() => encounters.find((e) => e.id === effEncId) || null, [encounters, effEncId]);
@@ -635,6 +659,8 @@ export function BinderApp({ onRequestMobile }) {
                   npc={npc}
                   note={cnotes[npc.id] || ""}
                   onNote={(t) => setNote(npc.id, t)}
+                  onEditText={(field, t) => editNpcText(npc.id, field, t)}
+                  onResetText={npc.edited ? () => resetNpcText(npc.id) : null}
                   onRemove={npc.custom ? () => removeCustomNpc(npc.id) : null}
                 />
               ) : !pc ? (

@@ -16,12 +16,15 @@
  *        encounters:  [encounter],             // initiative tracker state
  *        pcs:         [pathbuilderRawBuild],   // imported party
  *        gmPages:     [page],                  // GM notes workspace (v2)
+ *        npcEdits:    { [npcId]: { description?, notes? } }, // text overrides for base NPCs (v3)
  *    } }
  *
  *  v2: added overlay.gmPages (GM notes workspace). migrateOverlay fills it
  *  with [] for older overlays, so no DB migration is needed.
+ *  v3: added overlay.npcEdits (edited description/role text for the base
+ *  scenario's NPCs; custom NPCs are edited in place). Filled with {} on read.
  * ------------------------------------------------------------------ */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 // A placeholder overlay (nothing stored yet) must NEVER win last-write-wins
 // against real remote data. Stamping it with "now" made a fresh device's blank
@@ -32,7 +35,7 @@ export const SCHEMA_VERSION = 2;
 export const EPOCH = "1970-01-01T00:00:00.000Z";
 
 export function emptyOverlayBody() {
-  return { notes: {}, customNpcs: [], encounters: [], pcs: [], gmPages: [] };
+  return { notes: {}, customNpcs: [], encounters: [], pcs: [], gmPages: [], npcEdits: {} };
 }
 
 export function emptyOverlay(scenarioId, updatedAt = EPOCH) {
@@ -77,6 +80,7 @@ export function migrateOverlay(blob, scenarioId) {
       encounters: Array.isArray(body.encounters) ? body.encounters : [],
       pcs: Array.isArray(body.pcs) ? body.pcs : [],
       gmPages: Array.isArray(body.gmPages) ? body.gmPages : [],
+      npcEdits: body.npcEdits && typeof body.npcEdits === "object" ? body.npcEdits : {},
     },
   };
 }

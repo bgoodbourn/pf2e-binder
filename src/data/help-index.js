@@ -422,7 +422,9 @@ export const HELP_INDEX = [
     desc:
       "npcs are grouped in the rail below the party. “+ add npc” adds one, either as a name and " +
       "description or with full combat stats. npcs with full combat stats can be added to " +
-      "encounters. only npcs you added can be removed.",
+      "encounters. only npcs you added can be removed. click an npc's description or role text " +
+      "to edit it. it saves when you click away, and esc cancels. “reset text” restores a " +
+      "scenario npc's original wording.",
   },
   {
     id: "aon-links",
@@ -526,7 +528,7 @@ export const HELP_INDEX = [
     go: { tab: "gmnotes" },
     desc:
       "a linked entities block holds link chips. “+ add link” searches npcs, encounters, and " +
-      "pages, or takes a pasted url. clicking a chip opens the target: an npc's sheet, an " +
+      "pages, or takes a pasted url with an optional label to show on the chip. clicking a chip opens the target: an npc's sheet, an " +
       "encounter, a page, or the url in a new browser tab. a chip whose target has been deleted is " +
       "greyed out.",
   },

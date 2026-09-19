@@ -14,6 +14,7 @@ import { useScenarioData } from "../../data/ScenarioContext.jsx";
 import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters, orderCombatants } from "../../lib/combatants.js";
 import { uid, d20, parseBuild } from "../../lib/pf2e.js";
 import { makeNoteBlock } from "../../lib/gmnotes-util.js";
+import { applyNpcEdits } from "../../lib/npcs.js";
 import { useCompanions } from "../useCompanions.js";
 import { haptic } from "./parts/haptic.js";
 import { useSwipe } from "./parts/useSwipe.js";
@@ -83,7 +84,10 @@ export default function MobileApp({ onRequestDesktop }) {
 
   // ---- characters ----
   const pcs = useMemo(() => (overlay.pcs || []).map((raw) => parseBuild(raw)).filter(Boolean), [overlay.pcs]);
-  const allNpcs = useMemo(() => [...(S?.npcs || []), ...(overlay.customNpcs || [])], [S, overlay.customNpcs]);
+  const allNpcs = useMemo(
+    () => [...applyNpcEdits(S?.npcs, overlay.npcEdits), ...(overlay.customNpcs || [])],
+    [S, overlay.npcEdits, overlay.customNpcs]
+  );
   // A companion's numbers come from its owner's level, so it travels with it.
   const companions = useMemo(
     () => pcs.flatMap((p) => p.pets.map((pet, i) => ({ id: `${p.id}::pet${i}`, pet, owner: p }))),
