@@ -124,6 +124,9 @@ export function BinderApp({ onRequestMobile }) {
   const [npcSel, setNpcSel] = useState(null);
   const [section, setSection] = useState("overview");
   const [scenSection, setScenSection] = useState("overview");
+  // gm notes page last open per scenario, so leaving the tab and coming back
+  // (GmNotes unmounts) lands on the same page instead of the first one.
+  const [gmPageByScen, setGmPageByScen] = useState({});
   const [navOpen, setNavOpen] = useState(false);
   // hideable top dock: auto-pin on narrow screens (no hover), hover-reveal on desktop
   const [dockLocked, setDockLocked] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width:880px)").matches);
@@ -180,6 +183,10 @@ export function BinderApp({ onRequestMobile }) {
   // Stable writer for the GM notes workspace (overlay.gmPages). Stable identity
   // so GmNotes' unmount-flush effect binds to the right scenario.
   const persistGmPages = useCallback((gmPages) => patch({ gmPages }), [patch]);
+  const rememberGmPage = useCallback(
+    (pid) => setGmPageByScen((cur) => (cur[activeId] === pid ? cur : { ...cur, [activeId]: pid })),
+    [activeId]
+  );
 
   // Effective selections fall back to the first item (no setState-in-effect).
   const effPcId = (activePc && pcs.some((p) => p.id === activePc) && activePc) || pcs[0]?.id || null;
@@ -543,7 +550,7 @@ export function BinderApp({ onRequestMobile }) {
           // async — render a brief placeholder until they agree, otherwise GmNotes
           // would freeze on the previous scenario's notes.
           overlayId === activeId ? (
-            <GmNotes key={activeId || "none"} initialPages={overlay.gmPages || []} onPersist={persistGmPages} npcs={allNpcs} encounters={encounters} onOpenNpc={openNpc} onOpenEncounter={openEncounter} />
+            <GmNotes key={activeId || "none"} initialPages={overlay.gmPages || []} initialPageId={gmPageByScen[activeId]} onPageChange={rememberGmPage} onPersist={persistGmPages} npcs={allNpcs} encounters={encounters} onOpenNpc={openNpc} onOpenEncounter={openEncounter} />
           ) : (
             <main className="content"><div className="panel" style={{ padding: 40, color: "var(--ink-3)" }}>loading…</div></main>
           )

@@ -237,7 +237,7 @@ function gmNewBlock(id, type) {
  * working model in place for cursor-stable contenteditable, then forces a
  * re-render with a fresh array ref on structural changes. No React Compiler
  * runs in this build, so this uncontrolled-input pattern is safe. */
-export function GmNotes({ initialPages, onPersist, npcs = [], encounters = [], onOpenNpc, onOpenEncounter }) {
+export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, npcs = [], encounters = [], onOpenNpc, onOpenEncounter }) {
   // Working model in state (read during render → lint-safe). Text edits mutate
   // block objects in place WITHOUT setState (no re-render → cursor stays put);
   // structural changes call setPages. `latest` mirrors the model for saves.
@@ -249,7 +249,12 @@ export function GmNotes({ initialPages, onPersist, npcs = [], encounters = [], o
   const dragFrom = useRef(null);
   const focusComposer = useRef(false);
 
-  const [activeId, setActiveId] = useState(() => (gmClone(initialPages || [])[0]?.id ?? null));
+  // Reopen on the page the GM left (App remembers it across tab switches, since
+  // this component unmounts); fall back to the first page if it's gone.
+  const [activeId, setActiveId] = useState(() => {
+    const ps = initialPages || [];
+    return ps.some((p) => p.id === initialPageId) ? initialPageId : (ps[0]?.id ?? null);
+  });
   const [mode, setMode] = useState("prep");
   const [search, setSearch] = useState("");
   const [menuAt, setMenuAt] = useState(null);
@@ -320,6 +325,8 @@ export function GmNotes({ initialPages, onPersist, npcs = [], encounters = [], o
 
   const mains = pages.filter((p) => p.group !== "fork");
   const active = pages.find((p) => p.id === activeId) || pages[0] || null;
+  const shownId = active?.id ?? null;
+  useEffect(() => { onPageChange?.(shownId); }, [shownId, onPageChange]);
 
   const goPage = (pid) => { setActiveId(pid); setMenuAt(null); setComposerAt(null); setLinkPickerAt(null); setSearch(""); };
   const openMenu = (i) => { setComposerAt(null); setLinkPickerAt(null); setMenuAt((cur) => (cur === i ? null : i)); };
