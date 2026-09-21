@@ -7,6 +7,7 @@
  * ==================================================================== */
 import { uid } from "./pf2e.js";
 import { AON_BASE } from "./aon.js";
+import { statBlockShard, creatureKey, normalizeStatBlock, isEmptyStatBlock } from "./statblock.js";
 
 export function combatantFromPc(pc) {
   const sv = (k) => (pc.saves.find((s) => s.key === k) || {}).total || 0;
@@ -121,6 +122,35 @@ export function loadCreatures() {
   return _creaturePromise;
 }
 
+/* ---- bestiary stat blocks ----
+ * Strikes, abilities and spells for the bestiary live in src/data/statblocks/,
+ * sharded by AoN id (see tools/fetch-creatures.mjs), so a creature's block costs
+ * one ~100 KB fetch rather than the whole 3 MB. A block found this way is copied
+ * onto the combatant: from then on the card needs no network at the table. */
+const _shardLoaders = import.meta.glob("../data/statblocks/*.json");
+const _shards = new Map(); // shard name -> promise of { [aonId]: block }
+function loadShard(name) {
+  if (!_shards.has(name)) {
+    const load = _shardLoaders[`../data/statblocks/${name}.json`];
+    _shards.set(name, load ? load().then((m) => m.default).catch(() => ({})) : Promise.resolve({}));
+  }
+  return _shards.get(name);
+}
+export async function loadBestiaryStatBlock(aonId) {
+  if (aonId == null) return null;
+  const sb = (await loadShard(statBlockShard(aonId)))[aonId];
+  return isEmptyStatBlock(sb) ? null : normalizeStatBlock(sb, "bestiary");
+}
+/* The fallback for a creature that didn't come from the palette — a scenario
+ * creature the adventure gives no stat block for, say. Exact name only: a near
+ * miss would put the wrong creature's attacks in front of the GM. */
+export async function findBestiaryStatBlock(name) {
+  const key = creatureKey(name);
+  if (!key) return null;
+  const hit = (await loadCreatures()).find((cr) => cr.name.toLowerCase() === key);
+  return hit ? loadBestiaryStatBlock(hit.id) : null;
+}
+
 // Turn a standard creature record into an enemy combatant, carrying its AoN id
 // + page url so the card's ↗ link can open the Archives of Nethys entry.
 export function combatantFromCreature(cr) {
@@ -198,6 +228,8 @@ export function buildScenarioEncounters(existingNames, scenEnc) {
       pcId: null,
       npcId: c.npcId || null,
       notes: c.qty && c.qty > 1 ? `run ×${c.qty}` : "",
+      // no statBlock here: the scenario's block is resolved live by name (see
+      // lib/statblock.js), so a corrected scenario reaches encounters already made
     })),
   }));
 }

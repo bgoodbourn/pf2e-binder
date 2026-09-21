@@ -13,14 +13,16 @@ import {
 } from "../lib/conditions.js";
 import {
   combatantFromPc, combatantFromNpc, combatantFromCreature, combatantFromCompanion,
-  orderCombatants, loadCreatures, cachedCreatures,
+  orderCombatants, loadCreatures, cachedCreatures, loadBestiaryStatBlock, findBestiaryStatBlock,
 } from "../lib/combatants.js";
+import { resolveStatBlock, scenarioStatBlock, takesStatBlock, emptyStatBlock, normalizeStatBlock } from "../lib/statblock.js";
 import { statblockFor } from "../lib/companions.js";
 import { AON_BASE } from "../lib/aon.js";
 import { useScenarioData } from "../data/ScenarioContext.jsx";
 import { Sym } from "./icons.jsx";
 import { useCompanions } from "./useCompanions.js";
 import { useEncNav } from "./useEncNav.js";
+import { StatBlockCard, StatBlockEditor } from "./statblock.jsx";
 
 /* ---- Add Combatant modal (custom ally / enemy) ---- */
 function AddCombatant({ onAdd, onClose }) {
@@ -405,23 +407,52 @@ function AutoTextarea({ value, onChange, className, placeholder, ariaLabel, onKe
 /* ---- a single combatant row ----
  * `tucked` is set for an animal companion whose owner is in this encounter: it
  * sits under the owner, acts on the owner's initiative, and so has no
- * initiative cell of its own. Everything else about the row is unchanged. */
+ * initiative cell of its own. Everything else about the row is unchanged.
+ *
+ * `statBlock` is the block resolved for this creature (null when it has none),
+ * and `sbOpen` says its card is the one showing — the open card is a single id
+ * held by EncountersView, so opening one closes any other. */
 function CombatantRow({
-  c, tucked, index, round, compact, selected,
+  c, tucked, index, round, compact, selected, statBlock, sbOpen, sbFocus, sbFallback,
   onPatch, onRemove, onOpenPc, onOpenNpc, onAddCondition, onAddEffect, onToggleSelect,
+  onToggleStatBlock, onCloseStatBlock,
 }) {
   // Hand the row element to the rail's nav registry so the mini order can
   // measure it for dimming and scroll to it on a jump.
   const nav = useEncNav();
   const setRow = nav && nav.setRow;
+  // The row element is also what the stat-block card anchors to — held in state
+  // rather than a ref so the card renders once the element exists.
+  const [rowEl, setRowEl] = useState(null);
   const rowRef = useCallback(
-    (el) => { if (setRow) setRow(c.id, el); },
+    (el) => { if (setRow) setRow(c.id, el); setRowEl(el); },
     [setRow, c.id]
   );
   const [roll, setRoll] = useState(null); // ephemeral save-roll readout (not persisted)
   const [editing, setEditing] = useState(false); // stat-edit mode (roll vs edit, one at a time)
   const [stepping, setStepping] = useState(null); // condition id whose value stepper is open
+  const [sbSearch, setSbSearch] = useState(null); // "searching" | "none" — the bestiary lookup in edit mode
   const fx = conditionEffects(c);
+
+  // A keyboard-activated button reports a click with detail 0; that is what
+  // decides whether focus moves into the card.
+  const openStatBlock = (e) => { e.stopPropagation(); onToggleStatBlock(e.detail === 0); };
+  // Any edit lands on the combatant as a "custom" block, which outranks the
+  // scenario's and the bestiary's from then on.
+  const saveStatBlock = (next) => onPatch({ statBlock: { ...next, source: "custom" } });
+  // With the scenario's block underneath, clearing the edit falls back to it;
+  // with nothing underneath, null records that the GM wants no block at all.
+  const clearStatBlock = () => { setSbSearch(null); onPatch({ statBlock: sbFallback ? undefined : null }); };
+  const findInBestiary = () => {
+    setSbSearch("searching");
+    (c.aon != null ? loadBestiaryStatBlock(c.aon) : findBestiaryStatBlock(c.name)).then((sb) => {
+      setSbSearch(sb ? null : "none");
+      if (sb) onPatch({ statBlock: sb });
+    });
+  };
+  // What the editor works on: the resolved block, or a fresh draft the GM has
+  // started but not yet put anything in (which the card doesn't count as a block).
+  const sbDraft = statBlock || (c.statBlock ? normalizeStatBlock(c.statBlock) : null);
 
   // the stepper is a transient editor: escape closes it, and so does going compact
   const stepId = compact ? null : stepping; // going compact closes the editor
@@ -496,7 +527,14 @@ function CombatantRow({
       </div>
       <div className="cbt-main">
         <div className="cbt-name-row">
-          <span className="cbt-name">{c.name}</span>
+          {statBlock ? (
+            <>
+              <button className="cbt-name cbt-name-btn" data-sb-trigger onClick={openStatBlock} aria-expanded={sbOpen} tabIndex={compact ? -1 : 0}>{c.name}</button>
+              <button className="cbt-sb" data-sb-trigger onClick={openStatBlock} title="stat block" aria-label={`open stat block for ${c.name}`} tabIndex={compact ? -1 : 0}>⧉</button>
+            </>
+          ) : (
+            <span className="cbt-name">{c.name}</span>
+          )}
           {c.pcId ? (
             <button className="cbt-link" title="open character sheet" onClick={() => onOpenPc(c.pcId)}>↗</button>
           ) : c.ownerPcId ? (
@@ -519,8 +557,9 @@ function CombatantRow({
           )}
           <span className="cbt-summary">{summary}</span>
         </div>
-        <div className="cbt-detail">
+        <div className={`cbt-detail${editing ? " editing" : ""}`}>
         {editing ? (
+          <>
           <div className="cbt-editgrid">
             {[["ac", "ac"], ["maxHp", "total hp"], ["fort", "fort"], ["ref", "ref"], ["will", "will"], ["perception", "per"]].map(([k, label]) => (
               <label key={k} className="cbt-editfield">
@@ -534,6 +573,31 @@ function CombatantRow({
               </label>
             ))}
           </div>
+          {takesStatBlock(c) && (
+            <div className="cbt-sbedit">
+              <div className="cbt-sbedit-head">
+                <span className="cbt-sbedit-label">stat block</span>
+                {sbDraft && statBlock && statBlock.source !== "custom" && (
+                  <span className="cbt-sbedit-src">from {statBlock.source === "npc" ? "npc sheet" : statBlock.source} · editing makes a copy for this combatant</span>
+                )}
+                {sbDraft && (c.statBlock || !sbFallback) && (
+                  <button className="cbt-sbedit-clear" onClick={clearStatBlock}>{sbFallback ? "reset to scenario" : "remove stat block"}</button>
+                )}
+              </div>
+              {sbDraft ? (
+                <StatBlockEditor sb={sbDraft} onChange={saveStatBlock} />
+              ) : (
+                <div className="cbt-sbedit-empty">
+                  <button className="cond-add" onClick={() => { setSbSearch(null); onPatch({ statBlock: emptyStatBlock() }); }}>+ add stat block</button>
+                  <button className="cond-add" onClick={findInBestiary} disabled={sbSearch === "searching"}>
+                    {sbSearch === "searching" ? "searching…" : "find in bestiary"}
+                  </button>
+                  {sbSearch === "none" && <span className="cbt-sbedit-src">no bestiary creature named “{c.name}”</span>}
+                </div>
+              )}
+            </div>
+          )}
+          </>
         ) : (
         <div className="cbt-tiles">
           {tiles.map((t) => {
@@ -646,6 +710,9 @@ function CombatantRow({
         <span className="hp-max">{c.maxHp}</span>
       </div>
       <button className="cbt-x" onClick={(e) => { e.stopPropagation(); onRemove(); }} aria-label="remove combatant">×</button>
+      {sbOpen && statBlock && rowEl && (
+        <StatBlockCard name={c.name} level={c.level} sb={statBlock} anchor={rowEl} focusOnOpen={sbFocus} onClose={onCloseStatBlock} />
+      )}
     </div>
   );
 }
@@ -665,6 +732,9 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   const [npcMenu, setNpcMenu] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [mapUrl, setMapUrl] = useState("");
+  // The one open stat-block card: { id, keyboard } or null. Ephemeral, like select mode.
+  const [openSb, setOpenSb] = useState(null);
+  const sbTrigger = useRef(null); // the button that opened it, to hand focus back
   // Re-renders once the companion stat blocks land, so the party's companions
   // can be offered in the "add player" menu with their derived numbers.
   useCompanions();
@@ -695,7 +765,73 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
     setSeenEncounter(encounterId);
     setSelectMode(false);
     setSelected([]);
+    setOpenSb(null);
   }
+
+  /* Closing hands focus back to the trigger only when the card was opened from
+   * the keyboard — a mouse user's focus never left where they were working. */
+  const closeSb = useCallback(() => {
+    setOpenSb((cur) => {
+      if (cur && cur.keyboard && sbTrigger.current) sbTrigger.current.focus();
+      return null;
+    });
+  }, []);
+  const sbIsOpen = !!openSb;
+  useEffect(() => {
+    if (!sbIsOpen) return;
+    const onKey = (e) => { if (e.key === "Escape") closeSb(); };
+    /* The card is a reference surface, not a dialog: a click into an hp,
+     * initiative or note field leaves it up so the GM can read an attack and
+     * apply it. Its own triggers are skipped too — they toggle it themselves. */
+    const onDown = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest("[data-sb-card],[data-sb-trigger],input,textarea,select,[contenteditable='true']")) return;
+      setOpenSb(null);
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown);
+    };
+  }, [sbIsOpen, closeSb]);
+
+  /* Bestiary fallback. A creature with no block of its own and none in the
+   * scenario is looked up in the bestiary — by AoN id when it came from the
+   * palette, else by exact name — and a hit is copied onto the combatant, so the
+   * card works offline from then on. Each combatant is tried once per session;
+   * `statBlock: null` (cleared by the GM) is never refilled. */
+  const sbTried = useRef(new Set());
+  const sbCtx = useMemo(
+    () => ({
+      npcs: [...(scenario?.npcs || []), ...(overlay?.customNpcs || [])],
+      scenEncounters: scenario?.encounters || [],
+      encounterName: encounter ? encounter.name : null,
+    }),
+    [scenario, overlay?.customNpcs, encounter]
+  );
+  const sbNeeded = (encounter ? encounter.combatants : [])
+    .filter((c) => takesStatBlock(c) && c.statBlock === undefined && !scenarioStatBlock(c, sbCtx));
+  const sbNeededKey = sbNeeded.map((c) => c.id).join(",");
+  useEffect(() => {
+    if (!sbNeededKey) return;
+    let live = true;
+    for (const c of sbNeeded) {
+      if (sbTried.current.has(c.id)) continue;
+      sbTried.current.add(c.id);
+      (c.aon != null ? loadBestiaryStatBlock(c.aon) : findBestiaryStatBlock(c.name)).then((sb) => {
+        if (!live || !sb) return;
+        onChange((enc) => ({
+          ...enc,
+          combatants: enc.combatants.map((x) => (x.id === c.id && x.statBlock === undefined ? { ...x, statBlock: sb } : x)),
+        }));
+      });
+    }
+    return () => { live = false; };
+    // sbNeededKey stands in for sbNeeded, which is rebuilt every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sbNeededKey, onChange]);
 
   if (!encounter) {
     return (
@@ -717,7 +853,14 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   const setCombatants = (fn) => onChange((enc) => ({ ...enc, combatants: fn(enc.combatants) }));
   const patch = (id, p) => setCombatants((cs) => cs.map((c) => (c.id === id ? { ...c, ...(typeof p === "function" ? p(c) : p) } : c)));
   const addCombatant = (c) => setCombatants((cs) => [...cs, c]);
-  const removeCombatant = (id) => setCombatants((cs) => cs.filter((c) => c.id !== id));
+  const removeCombatant = (id) => {
+    if (openSb && openSb.id === id) setOpenSb(null);
+    setCombatants((cs) => cs.filter((c) => c.id !== id));
+  };
+  const toggleSb = (id, keyboard) => {
+    sbTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setOpenSb((cur) => (cur && cur.id === id ? null : { id, keyboard }));
+  };
 
   const toggleSelected = (id) =>
     setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
@@ -944,7 +1087,7 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
 
         <button
           className={`tb sel-toggle${selectMode ? " on" : ""}`}
-          onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+          onClick={() => { if (selectMode) exitSelect(); else { setOpenSb(null); setSelectMode(true); } }}
         >
           <span className="sel-box" aria-hidden /> select
         </button>
@@ -1009,6 +1152,12 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
             round={round}
             compact={selectMode}
             selected={selected.includes(c.id)}
+            statBlock={resolveStatBlock(c, sbCtx)}
+            sbFallback={!!scenarioStatBlock(c, sbCtx)}
+            sbOpen={!selectMode && !!openSb && openSb.id === c.id}
+            sbFocus={!!openSb && openSb.keyboard}
+            onToggleStatBlock={(keyboard) => toggleSb(c.id, keyboard)}
+            onCloseStatBlock={closeSb}
             onToggleSelect={() => toggleSelected(c.id)}
             onPatch={(p) => patch(c.id, p)}
             onRemove={() => removeCombatant(c.id)}
