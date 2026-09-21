@@ -1,22 +1,31 @@
 #!/usr/bin/env node
 /*
- * Regenerate src/data/creatures.json from the Archives of Nethys search index.
+ * Regenerate src/data/creatures.json and src/data/statblocks/ from the
+ * Archives of Nethys search index.
  *
  * Pulls every creature stat block from the public AoN Elasticsearch index, keeps
  * only the rulebooks we care about, collapses legacy/remaster duplicates
  * (preferring the remaster printing), and writes a compact record per creature.
+ *
+ * creatures.json is the palette's search list, so it stays small. The strikes,
+ * abilities and spells behind the tracker's stat-block card are much heavier
+ * (~3 MB), so they go to src/data/statblocks/NN.json — sharded by AoN id so the
+ * app fetches only the ~100 KB slice holding the creature it needs.
  *
  * Run:  node tools/fetch-creatures.mjs
  *
  * The AoN id + url are stored verbatim so the "open in Archives of Nethys" link
  * is correct for both legacy Monsters.aspx pages and remaster NPCs.aspx pages.
  */
-import { writeFile } from "node:fs/promises";
+import { writeFile, mkdir, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { parseStatBlock, compactStatBlock } from "./parse-statblock.mjs";
+import { STATBLOCK_SHARDS, statBlockShard } from "../src/lib/statblock.js";
 
 const ES = "https://elasticsearch.aonprd.com/aon/_search";
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "data", "creatures.json");
+const OUT_BLOCKS = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "data", "statblocks");
 
 // Exact AoN `source` names we want, with whether each is a remaster printing.
 // Remaster printings win when a creature appears in both a legacy and a remaster book.
@@ -43,6 +52,8 @@ async function fetchPage(from, size) {
     _source: [
       "id", "name", "level", "ac", "hp", "fortitude_save", "reflex_save",
       "will_save", "perception", "creature_family", "trait", "source", "legacy_id", "url",
+      // the stat-block card: structured where the index has it, markdown for the rest
+      "speed", "sense", "sense_markdown", "skill_mod", "immunity", "markdown",
     ],
     query: { bool: { filter: [{ term: { category: "creature" } }] } },
   };
@@ -132,16 +143,41 @@ async function main() {
     if (entry.remaster && !prev.remaster) byName.set(key, entry);
   }
 
-  const records = [...byName.values()]
-    .map(({ c, source }) => toRecord(c, source))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const winners = [...byName.values()].sort((a, b) => a.c.name.localeCompare(b.c.name));
+  const records = winners.map(({ c, source }) => toRecord(c, source));
 
   await writeFile(OUT, JSON.stringify(records) + "\n");
+
+  // Stat blocks, keyed by AoN id. A creature whose markdown defeats the parser
+  // keeps whatever the structured fields gave it rather than being dropped.
+  const blocks = {};
+  let noStrikes = 0;
+  let failed = 0;
+  for (const { c } of winners) {
+    let sb;
+    try {
+      sb = parseStatBlock(c);
+    } catch (err) {
+      failed++;
+      console.warn(`  could not parse ${c.name}: ${err.message}`);
+      continue;
+    }
+    if (!sb.actions.some((a) => a.kind === "strike")) noStrikes++;
+    blocks[numId(c.id)] = compactStatBlock(sb);
+  }
+  await rm(OUT_BLOCKS, { recursive: true, force: true });
+  await mkdir(OUT_BLOCKS, { recursive: true });
+  for (let n = 0; n < STATBLOCK_SHARDS; n++) {
+    const shard = {};
+    for (const [id, sb] of Object.entries(blocks)) if (statBlockShard(id) === statBlockShard(n)) shard[id] = sb;
+    await writeFile(join(OUT_BLOCKS, `${statBlockShard(n)}.json`), JSON.stringify(shard) + "\n");
+  }
 
   // Report.
   const perBook = {};
   for (const r of records) perBook[r.source] = (perBook[r.source] || 0) + 1;
   console.log(`\nwrote ${records.length} creatures to ${OUT}`);
+  console.log(`wrote ${Object.keys(blocks).length} stat blocks to ${OUT_BLOCKS}/ in ${STATBLOCK_SHARDS} shards (${noStrikes} with no strikes, ${failed} failed)`);
   for (const [book, n] of Object.entries(perBook).sort((a, b) => b[1] - a[1])) {
     console.log(`  ${String(n).padStart(5)}  ${book}`);
   }
