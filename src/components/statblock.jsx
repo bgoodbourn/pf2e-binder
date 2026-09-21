@@ -134,9 +134,12 @@ export function StatBlockCard({ name, level, sb, anchor, focusOnOpen, onClose })
     const main = anchor.querySelector(".cbt-main");
     const startX = main ? main.getBoundingClientRect().left : row.left;
     const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    // The round bar is pinned to the foot of the tracker and has to stay
+    // reachable, so it — not the viewport's edge — is the floor the card sits on.
+    const bar = document.querySelector(".round-bar");
+    const vh = bar ? Math.min(window.innerHeight, bar.getBoundingClientRect().top) : window.innerHeight;
     // the height the card wants: everything, up to the 60vh the design caps it at
-    const want = Math.min(card.offsetHeight - list.clientHeight + list.scrollHeight, vh * 0.6);
+    const want = Math.min(card.offsetHeight - list.clientHeight + list.scrollHeight, window.innerHeight * 0.6);
     const room = { below: vh - EDGE - (row.bottom + GAP), above: row.top - GAP - EDGE };
     const usable = (k) => room[k] >= Math.min(want, MIN_ROOM);
     if (!side.current || !usable(side.current)) {
@@ -162,9 +165,12 @@ export function StatBlockCard({ name, level, sb, anchor, focusOnOpen, onClose })
     };
   }, [place]);
 
+  // Focus waits for the first placement: until then the card is hidden, and a
+  // hidden element can't take focus.
+  const placed = !!pos;
   useEffect(() => {
-    if (focusOnOpen && cardRef.current) cardRef.current.focus({ preventScroll: true });
-  }, [focusOnOpen]);
+    if (focusOnOpen && placed && cardRef.current) cardRef.current.focus({ preventScroll: true });
+  }, [focusOnOpen, placed]);
 
   const toggle = (key) => setOpen((cur) => (cur === key ? null : key));
   const actions = sb.actions.map((a, i) => ({ a, key: `a${i}` }));
@@ -197,6 +203,7 @@ export function StatBlockCard({ name, level, sb, anchor, focusOnOpen, onClose })
         {SOURCE_TAG[sb.source] && <span className="sb-source">{SOURCE_TAG[sb.source]}</span>}
         <button className="sb-close" onClick={onClose} aria-label="close stat block">×</button>
       </div>
+      {sb.basis && <div className="sb-basis">{sb.basis}</div>}
       {(sb.speeds.length > 0 || sb.senses.length > 0 || facts.length > 0) && (
         <div className="sb-strip">
           {(sb.speeds.length > 0 || sb.senses.length > 0) && (

@@ -700,6 +700,7 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .sb-source{font-size:9.5px;letter-spacing:.04em;text-transform:lowercase;padding:2px 7px;border-radius:999px;background:var(--hush);color:var(--ink-3);}
 .sb-close{margin-left:auto;border:0;background:transparent;cursor:pointer;padding:0 2px;font-size:15px;line-height:1;color:#b4b3ad;}
 .sb-close:hover{color:var(--ink);}
+.sb-basis{flex:none;padding:6px 15px;font-size:11px;color:var(--ink-3);text-transform:lowercase;border-bottom:1px solid #efeee9;}
 .sb-strip{flex:none;padding:10px 15px;background:#fafaf8;border-bottom:1px solid #efeee9;}
 .sb-cells{display:flex;gap:9px;}
 .sb-cell+.sb-cell{border-left:1px solid #efeee9;padding-left:12px;min-width:0;}

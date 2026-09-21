@@ -15,7 +15,9 @@ import {
   combatantFromPc, combatantFromNpc, combatantFromCreature, combatantFromCompanion,
   orderCombatants, loadCreatures, cachedCreatures, loadBestiaryStatBlock, findBestiaryStatBlock,
 } from "../lib/combatants.js";
-import { resolveStatBlock, scenarioStatBlock, takesStatBlock, emptyStatBlock, normalizeStatBlock } from "../lib/statblock.js";
+import {
+  resolveStatBlock, scenarioStatBlock, scenarioBestiaryRef, takesStatBlock, emptyStatBlock, normalizeStatBlock,
+} from "../lib/statblock.js";
 import { statblockFor } from "../lib/companions.js";
 import { AON_BASE } from "../lib/aon.js";
 import { useScenarioData } from "../data/ScenarioContext.jsx";
@@ -566,7 +568,7 @@ function CombatantRow({
                 <span>{label}</span>
                 <input
                   type="number"
-                  value={c[k]}
+                  value={c[k] == null ? "" : c[k]}
                   onChange={(e) => onPatch({ [k]: e.target.value === "" ? 0 : Number(e.target.value) })}
                   aria-label={label}
                 />
@@ -702,7 +704,7 @@ function CombatantRow({
         <input
           type="number"
           className="hp-inp"
-          value={c.hp}
+          value={c.hp == null ? "" : c.hp}
           onChange={(e) => onPatch({ hp: e.target.value === "" ? 0 : Number(e.target.value) })}
           aria-label="current hp"
         />
@@ -798,10 +800,11 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   }, [sbIsOpen, closeSb]);
 
   /* Bestiary fallback. A creature with no block of its own and none in the
-   * scenario is looked up in the bestiary — by AoN id when it came from the
-   * palette, else by exact name — and a hit is copied onto the combatant, so the
-   * card works offline from then on. Each combatant is tried once per session;
-   * `statBlock: null` (cleared by the GM) is never refilled. */
+   * scenario is looked up in the bestiary: by AoN id when it came from the
+   * palette, else by exact name — or by the scenario's `bestiary` pointer, where
+   * that names the book creature behind a renamed one. A hit is copied onto the
+   * combatant, so the card works offline from then on. Each combatant is tried
+   * once per session; `statBlock: null` (cleared by the GM) is never refilled. */
   const sbTried = useRef(new Set());
   const sbCtx = useMemo(
     () => ({
@@ -814,24 +817,27 @@ export function EncountersView({ encounter, pcs, onChange, onOpenPc, onOpenNpc, 
   const sbNeeded = (encounter ? encounter.combatants : [])
     .filter((c) => takesStatBlock(c) && c.statBlock === undefined && !scenarioStatBlock(c, sbCtx));
   const sbNeededKey = sbNeeded.map((c) => c.id).join(",");
+  /* The lookup outlives the render that started it — the parent re-renders (and
+   * hands down a new onChange) while a shard is still loading — so the result is
+   * delivered through a ref to the latest onChange rather than dropped on cleanup. */
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => {
     if (!sbNeededKey) return;
-    let live = true;
     for (const c of sbNeeded) {
       if (sbTried.current.has(c.id)) continue;
       sbTried.current.add(c.id);
-      (c.aon != null ? loadBestiaryStatBlock(c.aon) : findBestiaryStatBlock(c.name)).then((sb) => {
-        if (!live || !sb) return;
-        onChange((enc) => ({
+      (c.aon != null ? loadBestiaryStatBlock(c.aon) : findBestiaryStatBlock(scenarioBestiaryRef(c, sbCtx) || c.name)).then((sb) => {
+        if (!sb) return;
+        onChangeRef.current((enc) => ({
           ...enc,
           combatants: enc.combatants.map((x) => (x.id === c.id && x.statBlock === undefined ? { ...x, statBlock: sb } : x)),
         }));
       });
     }
-    return () => { live = false; };
-    // sbNeededKey stands in for sbNeeded, which is rebuilt every render
+    // sbNeededKey stands in for sbNeeded and sbCtx, which are rebuilt every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sbNeededKey, onChange]);
+  }, [sbNeededKey]);
 
   if (!encounter) {
     return (

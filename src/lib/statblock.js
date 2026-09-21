@@ -6,6 +6,7 @@
  *
  *    statBlock: {
  *      source: "npc" | "scenario" | "bestiary" | "custom",
+ *      basis:  "variant jinkin · monster core 181",   // optional, where the numbers came from
  *      speeds:   [{ type: "walk", ft: 25 }, { type: "climb", ft: 25 }],
  *      senses:   ["darkvision", "web sense"],
  *      skills:   [{ name: "athletics", mod: 5 }],
@@ -213,6 +214,22 @@ export function scenarioStatBlock(c, { npcs, scenEncounters, encounterName } = {
     for (const cr of e.creatures || []) {
       if (!isEmptyStatBlock(cr.statBlock) && creatureKey(cr.name) === key) return normalizeStatBlock(cr.statBlock, "scenario");
     }
+  }
+  return null;
+}
+
+/* An adventure often runs a book creature under its own name — "Big Eye" is a
+ * giant gecko — and says so instead of printing a block. The scenario records
+ * that as `bestiary: "Giant Gecko"` on the creature; this is the name the
+ * bestiary fallback should look up in place of the combatant's own. */
+export function scenarioBestiaryRef(c, { scenEncounters, encounterName } = {}) {
+  const key = creatureKey(c.name);
+  if (!key) return null;
+  const encs = scenEncounters || [];
+  const ordered = [...encs.filter((e) => e.name === encounterName), ...encs.filter((e) => e.name !== encounterName)];
+  for (const e of ordered) {
+    const hit = (e.creatures || []).find((cr) => cr.bestiary && creatureKey(cr.name) === key);
+    if (hit) return hit.bestiary;
   }
   return null;
 }

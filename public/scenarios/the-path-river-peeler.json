@@ -1921,7 +1921,127 @@
         "Occult Spontaneous — DC 21, attack +12; 2nd (3 slots) blood vendetta, stupefy, telekinetic maneuver; 1st (4 slots) bane, fear, force barrage, ill omen; Cantrips (2nd) daze, detect magic, prestidigitation, shield, telekinetic projectile"
       ],
       "notes": "Met at her cottage, where she never lies but dodges questions. Sends the sheepskin that night. Makes her stand in A11 and opens with stupefy on casters.",
-      "source": "area A11, p. 22"
+      "source": "area A11, p. 22",
+      "statBlock": {
+        "speeds": [
+          {
+            "type": "walk",
+            "ft": 25
+          }
+        ],
+        "senses": [
+          "low-light vision"
+        ],
+        "skills": [
+          {
+            "name": "deception",
+            "mod": 9
+          },
+          {
+            "name": "intimidation",
+            "mod": 11
+          },
+          {
+            "name": "medicine",
+            "mod": 9
+          },
+          {
+            "name": "nature",
+            "mod": 9
+          },
+          {
+            "name": "occultism",
+            "mod": 11
+          },
+          {
+            "name": "stealth",
+            "mod": 8
+          },
+          {
+            "name": "survival",
+            "mod": 9
+          }
+        ],
+        "defences": {
+          "resistances": [
+            "cold 3"
+          ]
+        },
+        "actions": [
+          {
+            "kind": "strike",
+            "type": "melee",
+            "cost": 1,
+            "name": "claws",
+            "attack": 10,
+            "traits": [
+              "agile"
+            ],
+            "damage": "1d4+4 slashing"
+          },
+          {
+            "kind": "strike",
+            "type": "melee",
+            "cost": 1,
+            "name": "staff",
+            "attack": 9,
+            "traits": [
+              "two-hand d8"
+            ],
+            "damage": "1d4+4 bludgeoning"
+          },
+          {
+            "kind": "strike",
+            "type": "ranged",
+            "cost": 1,
+            "name": "dagger",
+            "attack": 10,
+            "traits": [
+              "agile",
+              "thrown 10 feet",
+              "versatile s"
+            ],
+            "range": 10,
+            "damage": "1d4+4 piercing"
+          }
+        ],
+        "spells": [
+          {
+            "name": "occult spontaneous",
+            "dc": 21,
+            "attack": 12,
+            "ranks": [
+              {
+                "rank": "2nd (3 slots)",
+                "spells": [
+                  "blood vendetta",
+                  "stupefy",
+                  "telekinetic maneuver"
+                ]
+              },
+              {
+                "rank": "1st (4 slots)",
+                "spells": [
+                  "bane",
+                  "fear",
+                  "force barrage",
+                  "ill omen"
+                ]
+              },
+              {
+                "rank": "cantrips (2nd)",
+                "spells": [
+                  "daze",
+                  "detect magic",
+                  "prestidigitation",
+                  "shield",
+                  "telekinetic projectile"
+                ]
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "jarelle",
@@ -2031,13 +2151,82 @@
       "description": "A tiny figure of twisted brambles that serves Damarys. It leads the band of sprigjacks at Hag Hollow.",
       "level": 0,
       "perception": 7,
-      "ac": null,
-      "hp": null,
-      "fort": null,
-      "ref": null,
-      "will": null,
+      "ac": 17,
+      "hp": 20,
+      "fort": 7,
+      "ref": 9,
+      "will": 5,
       "notes": "Glimpsed at the cottage. Fights beside Damarys in A11. Defends her if she is attacked at the cottage.",
-      "source": "area A11, p. 22. Elite sprigjack, Monster Core 6 and 332. Block not printed."
+      "source": "area A11, p. 22. Elite sprigjack, Monster Core 6 and 332. Block not printed.",
+      "statBlock": {
+        "speeds": [
+          {
+            "type": "walk",
+            "ft": 25
+          }
+        ],
+        "senses": [
+          "darkvision"
+        ],
+        "skills": [
+          {
+            "name": "acrobatics",
+            "mod": 7
+          },
+          {
+            "name": "nature",
+            "mod": 5
+          },
+          {
+            "name": "stealth",
+            "mod": 7
+          }
+        ],
+        "defences": {
+          "weaknesses": [
+            "axes 2",
+            "fire 2"
+          ]
+        },
+        "actions": [
+          {
+            "kind": "strike",
+            "type": "melee",
+            "cost": 1,
+            "name": "claw",
+            "attack": 9,
+            "traits": [
+              "agile",
+              "finesse"
+            ],
+            "reach": 0,
+            "damage": "1d4+3 slashing"
+          },
+          {
+            "kind": "strike",
+            "type": "ranged",
+            "cost": 1,
+            "name": "splinter",
+            "attack": 9,
+            "range": 30,
+            "damage": "1d4+2 piercing"
+          },
+          {
+            "kind": "ability",
+            "cost": 3,
+            "name": "bramble jump",
+            "traits": [
+              "plant",
+              "primal",
+              "teleportation",
+              "wood"
+            ],
+            "detail": "60 ft",
+            "text": "Requirements The twigjack is in undergrowth; Effect The twigjack scrambles into the undergrowth and instantly teleports to a square of undergrowth within 60 feet. This movement doesn't trigger reactions."
+          }
+        ],
+        "basis": "elite sprigjack · monster core 6, 332"
+      }
     },
     {
       "id": "zurkurk",
@@ -2113,7 +2302,122 @@
         "Scamper (one action) — As kobold warrior."
       ],
       "notes": "Found painting in A7. Joins the A6 fight after 3 rounds if alerted. Flees invisible toward A9 when hard pressed.",
-      "source": "area A7, p. 20"
+      "source": "area A7, p. 20",
+      "statBlock": {
+        "speeds": [
+          {
+            "type": "walk",
+            "ft": 25
+          }
+        ],
+        "senses": [
+          "darkvision"
+        ],
+        "skills": [
+          {
+            "name": "acrobatics",
+            "mod": 8
+          },
+          {
+            "name": "deception",
+            "mod": 10
+          },
+          {
+            "name": "diplomacy",
+            "mod": 10
+          },
+          {
+            "name": "intimidation",
+            "mod": 10
+          },
+          {
+            "name": "nature",
+            "mod": 7
+          },
+          {
+            "name": "occultism",
+            "mod": 7
+          },
+          {
+            "name": "stealth",
+            "mod": 8
+          }
+        ],
+        "defences": {
+          "resistances": [
+            "cold 3"
+          ]
+        },
+        "actions": [
+          {
+            "kind": "strike",
+            "type": "melee",
+            "cost": 1,
+            "name": "staff",
+            "attack": 8,
+            "traits": [
+              "two-hand d8"
+            ],
+            "damage": "1d4+4 bludgeoning"
+          },
+          {
+            "kind": "ability",
+            "cost": 1,
+            "name": "inspiring display",
+            "traits": [
+              "auditory",
+              "emotion",
+              "linguistic",
+              "mental"
+            ],
+            "detail": "30 ft · 4 temp hp to a kobold",
+            "text": "Requirements Zurkurk’s previous action was to Cast a Spell; Effect Zurkurk uses his magical display to inspire another kobold within 30 feet. That kobold gains 4 temporary Hit Points that last until the start of Zurkurk’s next turn."
+          },
+          {
+            "kind": "ability",
+            "cost": 1,
+            "name": "scamper",
+            "traits": [],
+            "detail": "stride speed +5 ft · +2 ac vs reactions",
+            "text": "As kobold warrior. Requirements The kobold warrior is adjacent to at least one enemy; Effect The kobold warrior Strides up to their Speed plus 5 feet and gains a +2 circumstance bonus to AC against reactions triggered by this movement. They must end this movement in a space that’s not adjacent to any enemy."
+          }
+        ],
+        "spells": [
+          {
+            "name": "occult spontaneous",
+            "dc": 20,
+            "ranks": [
+              {
+                "rank": "2nd (3 slots)",
+                "spells": [
+                  "darkness",
+                  "invisibility",
+                  "stupefy"
+                ]
+              },
+              {
+                "rank": "1st (4 slots)",
+                "spells": [
+                  "enfeeble",
+                  "fear",
+                  "grim tendrils",
+                  "protection"
+                ]
+              },
+              {
+                "rank": "cantrips (2nd)",
+                "spells": [
+                  "daze",
+                  "figment",
+                  "prestidigitation",
+                  "shield",
+                  "void warp"
+                ]
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "zoti",
@@ -2179,7 +2483,95 @@
         "Sneak Attack — Zoti deals an extra 1d4 precision damage to off-guard creatures."
       ],
       "notes": "Fights in A4 with Big Eye. Loses her first turn gathering gear unless she heard the fight in A3.",
-      "source": "area A4, p. 18"
+      "source": "area A4, p. 18",
+      "statBlock": {
+        "speeds": [
+          {
+            "type": "walk",
+            "ft": 25
+          }
+        ],
+        "senses": [
+          "darkvision"
+        ],
+        "skills": [
+          {
+            "name": "acrobatics",
+            "mod": 7
+          },
+          {
+            "name": "crafting",
+            "mod": 6
+          },
+          {
+            "name": "nature",
+            "mod": 7
+          },
+          {
+            "name": "stealth",
+            "mod": 9
+          },
+          {
+            "name": "survival",
+            "mod": 9
+          }
+        ],
+        "defences": {
+          "resistances": [
+            "cold 3"
+          ],
+          "notes": [
+            "ac 20 with shield raised",
+            "steel shield: hardness 5, hp 20, bt 10"
+          ]
+        },
+        "actions": [
+          {
+            "kind": "strike",
+            "type": "melee",
+            "cost": 1,
+            "name": "spear",
+            "attack": 7,
+            "traits": [],
+            "damage": "1d6+3 piercing"
+          },
+          {
+            "kind": "strike",
+            "type": "ranged",
+            "cost": 1,
+            "name": "spear",
+            "attack": 7,
+            "traits": [
+              "thrown 20 feet"
+            ],
+            "range": 20,
+            "damage": "1d6+3 piercing"
+          },
+          {
+            "kind": "ability",
+            "cost": 1,
+            "name": "scamper",
+            "traits": [],
+            "detail": "stride speed +5 ft · +2 ac vs reactions",
+            "text": "As kobold warrior. Requirements The kobold warrior is adjacent to at least one enemy; Effect The kobold warrior Strides up to their Speed plus 5 feet and gains a +2 circumstance bonus to AC against reactions triggered by this movement. They must end this movement in a space that’s not adjacent to any enemy."
+          },
+          {
+            "kind": "ability",
+            "cost": "passive",
+            "name": "sneak attack",
+            "traits": [],
+            "detail": "+1d4 precision vs off-guard",
+            "text": "Zoti deals an extra 1d4 precision damage to off-guard creatures."
+          },
+          {
+            "kind": "ability",
+            "cost": "reaction",
+            "name": "shield block",
+            "traits": [],
+            "detail": "monster core 360"
+          }
+        ]
+      }
     },
     {
       "id": "crumbrunk",
@@ -2192,13 +2584,128 @@
       "description": "A mischievous jinkin cast out by his own clan after a trap injured their leader. The Shiverscales grudgingly adopted him for his traps.",
       "level": 1,
       "perception": 7,
-      "ac": null,
-      "hp": null,
-      "fort": null,
-      "ref": null,
-      "will": null,
+      "ac": 15,
+      "hp": 19,
+      "fort": 6,
+      "ref": 10,
+      "will": 7,
       "notes": "Snipes with venom darts from cover in A2. Can be Coerced into describing Hag Hollow.",
-      "source": "area A2, p. 17. Partial block only."
+      "source": "area A2, p. 17. Partial block only.",
+      "statBlock": {
+        "speeds": [
+          {
+            "type": "walk",
+            "ft": 30
+          }
+        ],
+        "senses": [
+          "darkvision"
+        ],
+        "skills": [
+          {
+            "name": "acrobatics",
+            "mod": 7
+          },
+          {
+            "name": "crafting",
+            "mod": 5
+          },
+          {
+            "name": "deception",
+            "mod": 5
+          },
+          {
+            "name": "nature",
+            "mod": 5
+          },
+          {
+            "name": "stealth",
+            "mod": 7
+          },
+          {
+            "name": "thievery",
+            "mod": 7
+          }
+        ],
+        "defences": {
+          "weaknesses": [
+            "cold iron 2"
+          ]
+        },
+        "actions": [
+          {
+            "kind": "strike",
+            "type": "ranged",
+            "cost": 1,
+            "name": "blowgun",
+            "attack": 9,
+            "traits": [
+              "agile",
+              "nonlethal",
+              "reload 1"
+            ],
+            "range": 20,
+            "damage": "1 piercing",
+            "rider": "plus **giant viper venom** — fort **dc 17**; 3 of his 10 darts are coated"
+          },
+          {
+            "kind": "strike",
+            "type": "melee",
+            "cost": 1,
+            "name": "shortsword",
+            "attack": 9,
+            "traits": [
+              "agile",
+              "finesse",
+              "versatile s"
+            ],
+            "reach": 0,
+            "damage": "1d6–2 piercing"
+          },
+          {
+            "kind": "ability",
+            "cost": "passive",
+            "name": "sneak attack",
+            "text": "The jinkin deals 1d6 extra precision damage to off-guard creatures."
+          },
+          {
+            "kind": "ability",
+            "cost": "passive",
+            "name": "tinker",
+            "traits": [
+              "curse",
+              "primal"
+            ],
+            "detail": "dc 5",
+            "text": "A group of six jinkins can work together for an hour to imbue an item with a curse at a range of 60 feet. While this process is lengthy, it's also unobtrusive and can be performed while Hiding. Jinkins prefer to use this ability on magic items. The curse makes the item unreliable (DC 5 flat check or waste any action to Interact with or Activate the item), adds a bizarre requirement to use the item, or imparts some other curse of a similar caliber."
+          },
+          {
+            "kind": "ability",
+            "cost": "passive",
+            "name": "giant viper venom",
+            "traits": [
+              "poison"
+            ],
+            "detail": "1d6 poison · fort dc 17",
+            "text": "Saving Throw DC 17 Fortitude; Maximum Duration 6 rounds; Stage 1 1d6 poison damage (1 round); Stage 2 1d6 poison damage and drained 1 (1 round)"
+          }
+        ],
+        "spells": [
+          {
+            "name": "primal innate",
+            "dc": 17,
+            "ranks": [
+              {
+                "rank": "cantrips (1st)",
+                "spells": [
+                  "prestidigitation"
+                ]
+              }
+            ]
+          }
+        ],
+        "basis": "variant jinkin · monster core 181, with the adventure's blowgun"
+      }
     },
     {
       "id": "karrikka",
@@ -2325,13 +2832,14 @@
         {
           "name": "Sprigjack",
           "level": -1,
-          "hp": null,
-          "ac": null,
+          "hp": 10,
+          "ac": 15,
           "perception": 5,
-          "fort": null,
-          "ref": null,
-          "will": null,
-          "qty": 4
+          "fort": 5,
+          "ref": 7,
+          "will": 3,
+          "qty": 4,
+          "bestiary": "Sprigjack"
         }
       ]
     },
@@ -2343,12 +2851,12 @@
         {
           "name": "Crumbrunk",
           "level": 1,
-          "hp": null,
-          "ac": null,
+          "hp": 19,
+          "ac": 15,
           "perception": 7,
-          "fort": null,
-          "ref": null,
-          "will": null,
+          "fort": 6,
+          "ref": 10,
+          "will": 7,
           "qty": 1,
           "npcId": "crumbrunk"
         }
@@ -2368,7 +2876,80 @@
           "fort": 5,
           "ref": 9,
           "will": 5,
-          "qty": 4
+          "qty": 4,
+          "statBlock": {
+            "speeds": [
+              {
+                "type": "walk",
+                "ft": 25
+              }
+            ],
+            "senses": [
+              "darkvision"
+            ],
+            "skills": [
+              {
+                "name": "acrobatics",
+                "mod": 7
+              },
+              {
+                "name": "crafting",
+                "mod": 4
+              },
+              {
+                "name": "stealth",
+                "mod": 7
+              }
+            ],
+            "defences": {
+              "resistances": [
+                "cold 3"
+              ]
+            },
+            "actions": [
+              {
+                "kind": "strike",
+                "type": "melee",
+                "cost": 1,
+                "name": "shortsword",
+                "attack": 7,
+                "traits": [
+                  "agile",
+                  "finesse",
+                  "versatile s"
+                ],
+                "damage": "1d6+3 piercing"
+              },
+              {
+                "kind": "strike",
+                "type": "ranged",
+                "cost": 1,
+                "name": "crossbow",
+                "attack": 7,
+                "traits": [
+                  "reload 1"
+                ],
+                "range": 120,
+                "damage": "1d8+2 piercing"
+              },
+              {
+                "kind": "ability",
+                "cost": 1,
+                "name": "scamper",
+                "traits": [],
+                "detail": "stride speed +5 ft · +2 ac vs reactions",
+                "text": "Requirements The kobold warrior is adjacent to at least one enemy; Effect The kobold warrior Strides up to their Speed plus 5 feet and gains a +2 circumstance bonus to AC against reactions triggered by this movement. They must end this movement in a space that’s not adjacent to any enemy."
+              },
+              {
+                "kind": "ability",
+                "cost": "passive",
+                "name": "sneak attack",
+                "traits": [],
+                "detail": "+1d4 precision vs off-guard",
+                "text": "The Shiverscale kobold deals an extra 1d4 precision damage to off-guard creatures."
+              }
+            ]
+          }
         }
       ]
     },
@@ -2392,13 +2973,14 @@
         {
           "name": "Big Eye",
           "level": 1,
-          "hp": null,
-          "ac": null,
+          "hp": 20,
+          "ac": 16,
           "perception": 7,
-          "fort": null,
-          "ref": null,
-          "will": null,
-          "qty": 1
+          "fort": 6,
+          "ref": 10,
+          "will": 5,
+          "qty": 1,
+          "bestiary": "Giant Gecko"
         }
       ]
     },
@@ -2410,13 +2992,14 @@
         {
           "name": "Skeletal Ogre",
           "level": 3,
-          "hp": null,
-          "ac": null,
+          "hp": 50,
+          "ac": 17,
           "perception": 7,
-          "fort": null,
-          "ref": null,
-          "will": null,
-          "qty": 1
+          "fort": 8,
+          "ref": 8,
+          "will": 7,
+          "qty": 1,
+          "bestiary": "Skeletal Giant"
         }
       ]
     },
@@ -2434,7 +3017,81 @@
           "fort": 7,
           "ref": 11,
           "will": 7,
-          "qty": 2
+          "qty": 2,
+          "statBlock": {
+            "speeds": [
+              {
+                "type": "walk",
+                "ft": 25
+              }
+            ],
+            "senses": [
+              "darkvision"
+            ],
+            "skills": [
+              {
+                "name": "acrobatics",
+                "mod": 9
+              },
+              {
+                "name": "crafting",
+                "mod": 6
+              },
+              {
+                "name": "stealth",
+                "mod": 9
+              }
+            ],
+            "defences": {
+              "resistances": [
+                "cold 3"
+              ]
+            },
+            "actions": [
+              {
+                "kind": "strike",
+                "type": "melee",
+                "cost": 1,
+                "name": "shortsword",
+                "attack": 9,
+                "traits": [
+                  "agile",
+                  "finesse",
+                  "versatile s"
+                ],
+                "damage": "1d6+5 piercing"
+              },
+              {
+                "kind": "strike",
+                "type": "ranged",
+                "cost": 1,
+                "name": "crossbow",
+                "attack": 9,
+                "traits": [
+                  "reload 1"
+                ],
+                "range": 120,
+                "damage": "1d8+4 piercing"
+              },
+              {
+                "kind": "ability",
+                "cost": 1,
+                "name": "scamper",
+                "traits": [],
+                "detail": "stride speed +5 ft · +2 ac vs reactions",
+                "text": "Requirements The kobold warrior is adjacent to at least one enemy; Effect The kobold warrior Strides up to their Speed plus 5 feet and gains a +2 circumstance bonus to AC against reactions triggered by this movement. They must end this movement in a space that’s not adjacent to any enemy."
+              },
+              {
+                "kind": "ability",
+                "cost": "passive",
+                "name": "sneak attack",
+                "traits": [],
+                "detail": "+1d4 precision vs off-guard",
+                "text": "The Shiverscale kobold deals an extra 1d4 precision damage to off-guard creatures."
+              }
+            ],
+            "basis": "elite shiverscale kobold · monster core 6"
+          }
         },
         {
           "name": "Zurkurk",
@@ -2477,13 +3134,14 @@
         {
           "name": "Giant Viper",
           "level": 2,
-          "hp": null,
-          "ac": null,
+          "hp": 26,
+          "ac": 17,
           "perception": 7,
-          "fort": null,
-          "ref": null,
-          "will": null,
-          "qty": 1
+          "fort": 8,
+          "ref": 11,
+          "will": 6,
+          "qty": 1,
+          "bestiary": "Giant Viper"
         }
       ]
     },
@@ -2496,12 +3154,120 @@
           "name": "Barrow Claw Leshies",
           "level": 2,
           "hp": 30,
-          "ac": null,
+          "ac": 19,
           "perception": 6,
-          "fort": null,
-          "ref": null,
-          "will": null,
-          "qty": 2
+          "fort": 8,
+          "ref": 10,
+          "will": 6,
+          "qty": 2,
+          "statBlock": {
+            "speeds": [
+              {
+                "type": "walk",
+                "ft": 25
+              }
+            ],
+            "senses": [
+              "darkvision"
+            ],
+            "skills": [
+              {
+                "name": "athletics",
+                "mod": 6
+              },
+              {
+                "name": "nature",
+                "mod": 6
+              },
+              {
+                "name": "stealth",
+                "mod": 8
+              }
+            ],
+            "actions": [
+              {
+                "kind": "strike",
+                "type": "melee",
+                "cost": 1,
+                "name": "fist",
+                "attack": 10,
+                "traits": [
+                  "agile",
+                  "finesse"
+                ],
+                "damage": "1d6+2 bludgeoning"
+              },
+              {
+                "kind": "strike",
+                "type": "ranged",
+                "cost": 1,
+                "name": "spore pod",
+                "attack": 10,
+                "range": 30,
+                "damage": "1d6+2 bludgeoning",
+                "rider": "plus **spores**"
+              },
+              {
+                "kind": "ability",
+                "cost": 1,
+                "name": "change shape",
+                "traits": [
+                  "concentrate",
+                  "polymorph",
+                  "primal"
+                ],
+                "text": "The fungus leshy transforms into a Small giant mushroom or patch of fungi. This ability otherwise uses the effects of one with plants."
+              },
+              {
+                "kind": "ability",
+                "cost": 2,
+                "name": "spore cloud",
+                "traits": [
+                  "poison"
+                ],
+                "detail": "15 ft emanation · fort dc 16",
+                "text": "A fungus leshy can unleash a cloud of spores that irritates the eyes and throats of non-fungus creatures in a 15-foot emanation. Each creature must succeed at a DC 16 Fortitude save or take 1 persistent poison damage. A creature has its vision reduced as long as the persistent damage continues and can see only within 20 feet."
+              },
+              {
+                "kind": "ability",
+                "cost": "passive",
+                "name": "spores",
+                "text": "A creature that takes damage from a fungus leshy's spore pod Strike must attempt a saving throw with the same DC and effect as its Spore Cloud ability."
+              },
+              {
+                "kind": "ability",
+                "cost": "passive",
+                "name": "verdant burst",
+                "traits": [
+                  "healing",
+                  "primal",
+                  "vitality"
+                ],
+                "detail": "30 ft emanation",
+                "text": "When a fungus leshy dies, a burst of primal energy explodes from their body, restoring 2d8 Hit Points to each fungus creature in a 30-foot emanation. This area is filled with fungi, becoming difficult terrain. If the terrain is not a viable environment for these plants, they wither after 24 hours."
+              }
+            ],
+            "spells": [
+              {
+                "name": "primal innate",
+                "dc": 16,
+                "ranks": [
+                  {
+                    "rank": "constant (3rd)",
+                    "spells": [
+                      "speak with plants (fungi only)"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "basis": "variant fungus leshy · monster core 217",
+            "defences": {
+              "resistances": [
+                "cold 3"
+              ]
+            }
+          }
         }
       ]
     },
@@ -2525,12 +3291,12 @@
         {
           "name": "Mocking-Vain",
           "level": 0,
-          "hp": null,
-          "ac": null,
+          "hp": 20,
+          "ac": 17,
           "perception": 7,
-          "fort": null,
-          "ref": null,
-          "will": null,
+          "fort": 7,
+          "ref": 9,
+          "will": 5,
           "qty": 1,
           "npcId": "mockingvain"
         }
@@ -2544,13 +3310,122 @@
         {
           "name": "Path River Peeler",
           "level": 3,
-          "hp": null,
-          "ac": null,
+          "hp": 55,
+          "ac": 18,
           "perception": 10,
-          "fort": null,
-          "ref": null,
-          "will": null,
-          "qty": 1
+          "fort": 10,
+          "ref": 11,
+          "will": 6,
+          "qty": 1,
+          "statBlock": {
+            "speeds": [
+              {
+                "type": "walk",
+                "ft": 30
+              },
+              {
+                "type": "climb",
+                "ft": 20
+              }
+            ],
+            "senses": [
+              "echolocation (precise) 60 feet",
+              "low-light vision"
+            ],
+            "skills": [
+              {
+                "name": "acrobatics",
+                "mod": 10
+              },
+              {
+                "name": "athletics",
+                "mod": 9
+              },
+              {
+                "name": "stealth",
+                "mod": 12
+              }
+            ],
+            "defences": {
+              "weaknesses": [
+                "sensitive ears"
+              ],
+              "resistances": [
+                "cold 5"
+              ]
+            },
+            "actions": [
+              {
+                "kind": "strike",
+                "type": "melee",
+                "cost": 1,
+                "name": "claw",
+                "attack": 10,
+                "traits": [
+                  "agile",
+                  "finesse"
+                ],
+                "damage": "1d8+5 slashing"
+              },
+              {
+                "kind": "ability",
+                "cost": 1,
+                "name": "rend",
+                "traits": [],
+                "detail": "claw · monster core 360"
+              },
+              {
+                "kind": "ability",
+                "cost": 2,
+                "name": "blood run cold",
+                "traits": [
+                  "cold",
+                  "concentrate",
+                  "manipulate",
+                  "occult"
+                ],
+                "detail": "60 ft · 4d6 cold · basic will dc 20",
+                "text": "The Path River Peeler extends a bony finger at a creature it can see within 60 feet, draining heat from the creature’s body and sapping the strength from their muscles. The creature takes 4d6 cold damage with a DC 20 basic Will save. On a failure, the creature is also enfeebled 1 for 10 minutes (or enfeebled 2 for an hour on a critical failure). The Peeler can’t use Blood Run Cold again for 1d4 rounds."
+              },
+              {
+                "kind": "ability",
+                "cost": 1,
+                "name": "otherworldly cry",
+                "traits": [
+                  "auditory",
+                  "emotion",
+                  "fear",
+                  "mental"
+                ],
+                "detail": "60 ft emanation · will dc 20",
+                "text": "The Path River Peeler makes an eerie, spine-tingling vocalization that can be heard up to a mile away. Each creature in a 60-foot emanation must attempt a DC 20 Will save. Regardless of the result, a creature is temporarily immune to the Peeler’s Otherworldly Cry for 10 minutes. Critical Success The creature is unaffected. Success The creature is frightened 1. Failure The creature is frightened 2. Critical Failure The creature is frightened 3 and fleeing for 1 round."
+              },
+              {
+                "kind": "ability",
+                "cost": "reaction",
+                "name": "flight response",
+                "traits": [],
+                "detail": "stride or climb · +2 ac vs reactions",
+                "text": "Trigger The Path River Peeler gains the frightened condition or its frightened condition increases; Effect The Peeler Strides or Climbs up to its Speed. The Peeler gains a +2 circumstance bonus to AC against reactions triggered by this movement."
+              },
+              {
+                "kind": "ability",
+                "cost": "passive",
+                "name": "sensitive ears",
+                "traits": [],
+                "detail": "sonic damage: will dc 16 or frightened 1",
+                "text": "The Path River Peeler’s oversized ears make it particularly sensitive to loud noises. A creature that attempts to Demoralize the Peeler by shouting, banging on a shield, or similar tactic ignores the usual –4 circumstance penalty for not sharing a language with the Peeler. Whenever the Peeler takes sonic damage, it must succeed at a DC 16 Will saving throw or be frightened 1 (or frightened 2 on a critical failure)."
+              },
+              {
+                "kind": "ability",
+                "cost": "passive",
+                "name": "echolocation",
+                "traits": [],
+                "detail": "hearing is a precise sense to 60 ft",
+                "text": "The Path River Peeler can use its hearing as a precise sense at the listed range."
+              }
+            ]
+          }
         }
       ]
     }
@@ -2580,5 +3455,5 @@
     "ogre": "Ogre",
     "Hell": "Hell"
   },
-  "rev": "1v0nvxr"
+  "rev": "1c88sgm"
 }
