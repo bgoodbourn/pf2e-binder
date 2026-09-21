@@ -412,6 +412,11 @@ export function BinderApp({ onRequestMobile }) {
   }, [pc]);
 
   const goScen = (id) => { setScenSection(id); setNavOpen(false); };
+  // Not every scenario authors an "overview" section — land on the first one it has.
+  const effScenSection = useMemo(() => {
+    const ids = (S?.tabs || []).flatMap((g) => g.items.map((i) => i.id));
+    return scenSection === "maps" || ids.includes(scenSection) || ids.length === 0 ? scenSection : ids[0];
+  }, [S, scenSection]);
   const switchTo = (w) => { setWorkspace(w); setNavOpen(false); };
 
   // Help's "open it in the … tab" button. Where the app already tracks the
@@ -449,7 +454,7 @@ export function BinderApp({ onRequestMobile }) {
         ? pc.name
         : "characters"
       : effWorkspace === "scenario"
-      ? scenSection
+      ? effScenSection
       : encounter
       ? encounter.name
       : "encounters";
@@ -616,7 +621,7 @@ export function BinderApp({ onRequestMobile }) {
             {effWorkspace === "scenario" && (S?.maps?.length > 0) && (
               <div className="rail-group">
                 <div className="rail-group-label">reference</div>
-                <button className={`rail-tab ${scenSection === "maps" ? "active" : ""}`} onClick={() => goScen("maps")}>
+                <button className={`rail-tab ${effScenSection === "maps" ? "active" : ""}`} onClick={() => goScen("maps")}>
                   <ScenSym name="overview" className="rail-sym" />
                   <span className="rail-label">Maps</span>
                   <span className="rail-arrow">→</span>
@@ -629,7 +634,7 @@ export function BinderApp({ onRequestMobile }) {
                 <div className="rail-group" key={g.group}>
                   <div className="rail-group-label">{g.group}</div>
                   {g.items.map((it) => (
-                    <button key={it.id} className={`rail-tab ${scenSection === it.id ? "active" : ""}`} onClick={() => goScen(it.id)}>
+                    <button key={it.id} className={`rail-tab ${effScenSection === it.id ? "active" : ""}`} onClick={() => goScen(it.id)}>
                       <ScenSym name={(S?.symFor || {})[it.id]} className="rail-sym" />
                       <span className="rail-label">{it.label}</span>
                       <span className="rail-arrow">→</span>
@@ -704,7 +709,7 @@ export function BinderApp({ onRequestMobile }) {
                 </article>
               ))}
 
-            {effWorkspace === "scenario" && <ScenarioView section={scenSection} onGo={goScen} />}
+            {effWorkspace === "scenario" && <ScenarioView section={effScenSection} onGo={goScen} />}
             {effWorkspace === "encounters" && (
               <EncountersView
                 encounter={encounter}
