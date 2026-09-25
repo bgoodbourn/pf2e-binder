@@ -8,9 +8,10 @@
  *  src/lib (conditionEffects, d20, combatant factories); nothing here
  *  reimplements PF2e rules.
  * ==================================================================== */
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import "../../mobile.css";
 import { useScenarioData } from "../../data/ScenarioContext.jsx";
+import { reportView } from "../../data/sync.js";
 import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters, orderCombatants } from "../../lib/combatants.js";
 import { uid, d20, parseBuild } from "../../lib/pf2e.js";
 import { makeNoteBlock } from "../../lib/gmnotes-util.js";
@@ -45,7 +46,10 @@ export default function MobileApp({ onRequestDesktop }) {
   const [screen, setScreen] = useState("notes");
   // direction the next screen slides in from: "fwd" (from the right) or "back" (from the left)
   const [navDir, setNavDir] = useState("fwd");
-  const [pageIndex, setPageIndex] = useState(0);
+  // The GM page on screen, by id so it stays put when pages are inserted or
+  // reordered elsewhere (e.g. by Claude via the MCP server). `index` is the
+  // fallback when that page is deleted.
+  const [pageSel, setPageSel] = useState({ id: null, index: 0 });
   const [activeEncounterId, setActiveEncounterId] = useState(null);
   const [selectedCombatantId, setSelectedCombatantId] = useState(null);
   const [pending, setPending] = useState(8);
@@ -57,8 +61,17 @@ export default function MobileApp({ onRequestDesktop }) {
 
   // ---- derived data (same sources as the desktop binder) ----
   const pages = useMemo(() => overlay.gmPages || [], [overlay.gmPages]);
-  const pageIdx = clamp(pageIndex, pages.length);
+  const selIdx = pageSel.id == null ? -1 : pages.findIndex((p) => p.id === pageSel.id);
+  const pageIdx = selIdx !== -1 ? selIdx : clamp(pageSel.index, pages.length);
   const page = pages[pageIdx] || null;
+  const setPageIndex = useCallback((i) => setPageSel({ id: pages[i]?.id ?? null, index: i }), [pages]);
+
+  // Tell the MCP server what's on screen, so Claude can act on "this page".
+  const shownPageId = page?.id ?? null;
+  useEffect(() => {
+    if (!activeId) return;
+    reportView({ scenario_id: activeId, tab: `mobile:${screen}`, section_id: null, gm_page_id: shownPageId });
+  }, [activeId, screen, shownPageId]);
 
   const encounters = useMemo(
     () => seedEncounterMaps(overlay.encounters || [], S?.encounters),
@@ -69,8 +82,16 @@ export default function MobileApp({ onRequestDesktop }) {
     [patch, S]
   );
   const updateEncounter = useCallback(
-    (id, updater) => writeEncounters(encounters.map((e) => (e.id === id ? updater(e) : e))),
-    [encounters, writeEncounters]
+    // Applied to the latest overlay, not this render's copy, so updates that
+    // land together (e.g. several stat-block lookups) don't overwrite each other.
+    (id, updater) =>
+      patch((prev) => ({
+        encounters: stripSeededMaps(
+          seedEncounterMaps(prev.encounters || [], S?.encounters).map((e) => (e.id === id ? updater(e) : e)),
+          S?.encounters
+        ),
+      })),
+    [patch, S]
   );
 
   const encounter =
@@ -112,8 +133,9 @@ export default function MobileApp({ onRequestDesktop }) {
         patch({ gmPages: next });
       } else {
         // no running order yet — start one so the note has a home
-        patch({ gmPages: [...pages, { id: uid(), title: "live notes", group: "main", blocks: [note] }] });
-        setPageIndex(pages.length);
+        const pid = uid();
+        patch({ gmPages: [...pages, { id: pid, title: "live notes", group: "main", blocks: [note] }] });
+        setPageSel({ id: pid, index: pages.length });
       }
     },
     [page, pages, pageIdx, patch]
@@ -126,7 +148,7 @@ export default function MobileApp({ onRequestDesktop }) {
   }, [encounters]);
   const goPageById = useCallback((id) => {
     const i = pages.findIndex((p) => p.id === id);
-    if (i >= 0) setPageIndex(i);
+    if (i >= 0) setPageSel({ id, index: i });
   }, [pages]);
 
   // ---- combat ----

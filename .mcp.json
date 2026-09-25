@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pf2e-binder": {
+      "command": "node",
+      "args": ["--env-file=.env", "mcp/server.js"]
+    }
+  }
+}

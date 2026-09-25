@@ -13,8 +13,9 @@ import {
 } from "../lib/conditions.js";
 import {
   combatantFromPc, combatantFromNpc, combatantFromCreature, combatantFromCompanion,
-  orderCombatants, loadCreatures, cachedCreatures, loadBestiaryStatBlock, findBestiaryStatBlock,
+  orderCombatants,
 } from "../lib/combatants.js";
+import { loadCreatures, cachedCreatures, loadBestiaryStatBlock, findBestiaryStatBlock } from "../lib/bestiary-loader.js";
 import {
   resolveStatBlock, scenarioStatBlock, scenarioBestiaryRef, takesStatBlock, emptyStatBlock, normalizeStatBlock,
 } from "../lib/statblock.js";

@@ -104,6 +104,64 @@ export async function remoteUpsertOverlay(blob) {
   return true;
 }
 
+// Raised when a compare-and-swap write loses: the row changed since `expected`.
+export class OverlayConflict extends Error {}
+
+// Compare-and-swap overlay write (supabase/migrations/0002_mcp_sync.sql).
+// `expected` is the updated_at string last read from the server (null when no
+// row was seen). Returns the new updated_at string. Until the migration is
+// applied the RPC doesn't exist; then fall back to the old blind upsert and
+// return null (no version token), so sync keeps working as before.
+let casMissing = false;
+export async function remotePutOverlay(id, body, expected) {
+  if (!supabase) return null;
+  if (!casMissing) {
+    const { data, error } = await supabase.rpc("put_overlay", {
+      p_scenario_id: id,
+      p_overlay: body,
+      p_expected: expected ?? null,
+      p_schema_version: SCHEMA_VERSION,
+    });
+    if (!error) return data;
+    if (error.code === "PT409" || error.status === 409) throw new OverlayConflict(error.message);
+    if (error.code !== "PGRST202" && error.status !== 404) throw error;
+    casMissing = true;
+    console.warn("[sync] put_overlay RPC missing: apply supabase/migrations/0002_mcp_sync.sql. Falling back to blind upsert.");
+  }
+  await remoteUpsertOverlay({ scenario_id: id, overlay: body, schema_version: SCHEMA_VERSION });
+  return null;
+}
+
+// Realtime: call onChange(updatedAt|null) whenever this scenario's overlay row
+// changes on the server, and onReady() each time the channel (re)subscribes so
+// the caller can catch up on anything missed while disconnected. Returns an
+// unsubscribe function.
+export function subscribeOverlay(id, onChange, onReady) {
+  if (!supabase) return () => {};
+  const channel = supabase
+    .channel(`overlay:${id}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "scenario_overlay", filter: `scenario_id=eq.${id}` },
+      (payload) => onChange(payload?.new?.updated_at ?? null)
+    )
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") onReady?.();
+    });
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+// What the binder is showing (single row), for the MCP server's
+// get_current_view. Best effort: silently ignored before the migration.
+export async function remoteSetView(view) {
+  if (!supabase) return null;
+  const { error } = await supabase.from("binder_view").upsert({ id: 1, ...view }, { onConflict: "id" });
+  if (error && error.code !== "42P01" && error.code !== "PGRST205") throw error;
+  return true;
+}
+
 export async function remoteHeartbeat() {
   if (!supabase) return null;
   const { error } = await supabase.from("heartbeat").upsert({ id: 1 }, { onConflict: "id" });

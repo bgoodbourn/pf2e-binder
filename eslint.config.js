@@ -18,4 +18,9 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    // the MCP server and the tests run under Node
+    files: ['mcp/**/*.js', 'test/**/*.js'],
+    languageOptions: { globals: globals.node },
+  },
 ])

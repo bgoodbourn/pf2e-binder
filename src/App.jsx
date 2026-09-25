@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useScenarioData } from "./data/ScenarioContext.jsx";
+import { reportView } from "./data/sync.js";
 import { parseBuild, uid } from "./lib/pf2e.js";
 import { loadAonIndex } from "./lib/aon.js";
 import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters, orderCombatants } from "./lib/combatants.js";
@@ -271,8 +272,16 @@ export function BinderApp({ onRequestMobile }) {
   }, [encounters, writeEncounters]);
 
   const updateEncounter = useCallback(
-    (id, updater) => writeEncounters(encounters.map((e) => (e.id === id ? updater(e) : e))),
-    [encounters, writeEncounters]
+    // Applied to the latest overlay, not this render's copy, so updates that
+    // land together (e.g. several stat-block lookups) don't overwrite each other.
+    (id, updater) =>
+      patch((prev) => ({
+        encounters: stripSeededMaps(
+          seedEncounterMaps(prev.encounters || [], S?.encounters).map((e) => (e.id === id ? updater(e) : e)),
+          S?.encounters
+        ),
+      })),
+    [patch, S]
   );
 
   const removeEncounter = useCallback(
@@ -417,6 +426,13 @@ export function BinderApp({ onRequestMobile }) {
     const ids = (S?.tabs || []).flatMap((g) => g.items.map((i) => i.id));
     return scenSection === "maps" || ids.includes(scenSection) || ids.length === 0 ? scenSection : ids[0];
   }, [S, scenSection]);
+
+  // Tell the MCP server what's on screen, so Claude can act on "this page".
+  const shownGmPage = gmPageByScen[activeId] ?? null;
+  useEffect(() => {
+    if (!activeId) return;
+    reportView({ scenario_id: activeId, tab: effWorkspace, section_id: effScenSection, gm_page_id: shownGmPage });
+  }, [activeId, effWorkspace, effScenSection, shownGmPage]);
   const switchTo = (w) => { setWorkspace(w); setNavOpen(false); };
 
   // Help's "open it in the … tab" button. Where the app already tracks the

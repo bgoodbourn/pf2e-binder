@@ -20,8 +20,12 @@ import {
   saveOverlayDebounced,
   flushOverlayWrites,
 } from "./repo.js";
-import { initSync, pullScenario, pullOverlay, mergeRemoteScenarios, syncEnabled } from "./sync.js";
-import { remoteUpsertScenario } from "./supabase.js";
+import {
+  initSync, pullScenario, pullOverlay, mergeRemoteScenarios, syncEnabled,
+  setOverlayAdoptHook, onRemoteOverlayChange, syncOverlayNow,
+} from "./sync.js";
+import { remoteUpsertScenario, subscribeOverlay } from "./supabase.js";
+import { mergeOverlay, deepEqual } from "./merge.js";
 import { emptyOverlayBody, emptyScenario, slugify, SCHEMA_VERSION, isoNow } from "./schema.js";
 
 const WIKI = "https://pathfinderwiki.com/wiki/";
@@ -95,18 +99,55 @@ export function ScenarioProvider({ children }) {
   const activeIdRef = useRef(null); // guards background pulls against scenario switches
   const manualSwitchRef = useRef(false); // set once the user deliberately picks a scenario
 
-  // Background pull: refresh from Supabase without blocking the UI, adopting
-  // remote data only if it's newer (pullScenario/pullOverlay handle the merge).
-  // Guarded so a stale pull can't overwrite a scenario the user switched away from.
+  const overlayIdRef = useRef(null); // mirrors overlayId for the sync adopt hook
+  useEffect(() => { overlayIdRef.current = overlayId; }, [overlayId]);
+
+  // Background pull: refresh from Supabase without blocking the UI. The base
+  // scenario is adopted iff newer (guarded so a stale pull can't overwrite a
+  // scenario the user switched away from). The overlay is reconciled by sync,
+  // which delivers any change through the adopt hook below.
   const bgPull = useCallback((id) => {
     if (!syncEnabled) return;
     pullScenario(id)
       .then((base) => { if (base && activeIdRef.current === id) setScenario(base); })
       .catch(() => {});
-    pullOverlay(id)
-      .then((ov) => { if (ov && activeIdRef.current === id) { setOverlay(ov.overlay); setOverlayId(id); } })
-      .catch(() => {});
+    pullOverlay(id);
   }, []);
+
+  // Sync produced a new overlay (e.g. Claude wrote via the MCP server). Merge
+  // it into what's on screen, keeping anything typed since the sync started
+  // (base = the body the sync sent), and persist through the normal writer.
+  useEffect(() => {
+    setOverlayAdoptHook((id, sentLocal, target) => {
+      if (overlayIdRef.current !== id) return undefined; // not on screen
+      setOverlay((prev) => {
+        const next = mergeOverlay(sentLocal, prev, target);
+        if (deepEqual(next, prev)) return prev;
+        saveOverlayDebounced(id, next); // idempotent; its push is a no-op if nothing new
+        return next;
+      });
+      return false;
+    });
+    return () => setOverlayAdoptHook(null);
+  }, []);
+
+  // Live updates: follow the active scenario's overlay row on the server, and
+  // catch up whenever the channel (re)connects or the tab comes back.
+  useEffect(() => {
+    if (!syncEnabled || !ready || !activeId) return;
+    const id = activeId;
+    const unsubscribe = subscribeOverlay(
+      id,
+      (updatedAt) => onRemoteOverlayChange(id, updatedAt),
+      () => syncOverlayNow(id, { fetch: true })
+    );
+    const onVisible = () => { if (document.visibilityState === "visible") syncOverlayNow(id, { fetch: true }); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      unsubscribe();
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [ready, activeId]);
 
   // Load a scenario + its overlay when the active id changes (local first).
   const loadActive = useCallback(
@@ -204,11 +245,14 @@ export function ScenarioProvider({ children }) {
   );
 
   // Shallow-merge a partial overlay body: update UI now, debounce the write.
+  // `partial` may be a function of the current body, for updates that must
+  // build on the latest state (several can land in one tick, e.g. async
+  // stat-block lookups) rather than on a possibly stale render-time copy.
   const patch = useCallback(
     (partial) => {
       if (!activeId) return;
       setOverlay((prev) => {
-        const next = { ...prev, ...partial };
+        const next = { ...prev, ...(typeof partial === "function" ? partial(prev) : partial) };
         saveOverlayDebounced(activeId, next);
         return next;
       });

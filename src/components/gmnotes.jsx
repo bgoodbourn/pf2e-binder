@@ -8,16 +8,19 @@
  *
  *  Only GmNotes is consumed outside this module.
  * ==================================================================== */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Sym } from "./icons.jsx";
-import { gmStamp } from "../lib/gmnotes-util.js";
+import { gmStamp, gmNewBlock, isCounterId } from "../lib/gmnotes-util.js";
+import { merge3, deepEqual } from "../data/merge.js";
 
 const gmClone = (x) => JSON.parse(JSON.stringify(x || []));
 function gmSeedUid(pages) {
   let max = 0;
+  // Only the editor's own counter ids count: ids minted elsewhere (mobile
+  // uid(), the MCP server's "m-" ids) must not push the counter around.
   const scan = (s) => {
-    const mm = /(\d+)$/.exec(String(s || ""));
-    if (mm) max = Math.max(max, +mm[1]);
+    if (!isCounterId(s)) return;
+    max = Math.max(max, +/(\d+)$/.exec(String(s))[1]);
   };
   (pages || []).forEach((p) => {
     scan(p.id);
@@ -217,22 +220,6 @@ function GmLinkPicker({ npcs, encounters, pageEntries, onPick, onClose }) {
   );
 }
 
-function gmNewBlock(id, type) {
-  switch (type) {
-    case "heading": return { id, type: "heading", text: "" };
-    case "read": return { id, type: "read", text: "" };
-    case "check": return { id, type: "check", skill: "", dc: "", secret: true, tiers: [
-      { label: "crit success", dotsOn: 4, text: "" },
-      { label: "success", dotsOn: 3, text: "" },
-      { label: "failure", dotsOn: 2, text: "" },
-      { label: "crit failure", dotsOn: 1, text: "" },
-    ] };
-    case "qa": return { id, type: "qa", qaTitle: "if the players ask…", rows: [{ q: "", a: "" }, { q: "", a: "" }] };
-    case "links": return { id, type: "links", items: [] };
-    default: return { id, type: "p", text: "" };
-  }
-}
-
 /* eslint-disable react-hooks/immutability -- GM notes deliberately mutates the
  * working model in place for cursor-stable contenteditable, then forces a
  * re-render with a fresh array ref on structural changes. No React Compiler
@@ -267,6 +254,19 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
 
   useEffect(() => { latest.current = pages; });
 
+  // The pages value the overlay holds as far as we know: the last copy we
+  // persisted, or the last external value we adopted. It's the merge base for
+  // external changes and lets us recognise our own saves echoing back.
+  const known = useRef(initialPages || []);
+  const persist = useCallback(
+    (list) => {
+      const copy = gmClone(list);
+      known.current = copy;
+      onPersist(copy);
+    },
+    [onPersist]
+  );
+
   // next = authoritative pages to persist; immediate flushes now (structural),
   // otherwise debounced (text). Debounced fires use latest.current.
   const save = (next, immediate) => {
@@ -274,24 +274,44 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
     if (immediate) {
       saveTimer.current = null;
       latest.current = next;
-      onPersist(gmClone(next));
+      persist(next);
     } else {
       saveTimer.current = setTimeout(() => {
         saveTimer.current = null;
-        onPersist(gmClone(latest.current));
+        persist(latest.current);
       }, 500);
     }
   };
+
+  // External change to overlay.gmPages (Claude via the MCP server, or a sync
+  // merge): fold it into the working model with a three-way merge so edits
+  // not yet saved here survive, then re-render. A focused contenteditable
+  // keeps its text regardless (GmEditable never overwrites itself).
+  useEffect(() => {
+    const incoming = initialPages || [];
+    if (incoming === known.current) return; // our own save echoing back
+    const base = known.current;
+    known.current = incoming;
+    if (deepEqual(incoming, base)) return;
+    const mine = latest.current;
+    const merged = gmClone(merge3(base, mine, incoming)); // clone: the model is mutated in place
+    if (deepEqual(merged, mine)) return;
+    latest.current = merged;
+    setPages(merged);
+    uidRef.current = Math.max(uidRef.current, gmSeedUid(merged));
+    if (!deepEqual(merged, incoming)) save(merged, false); // push our unsaved edits on top
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs only when the overlay's pages change
+  }, [initialPages]);
 
   // Flush any pending save when unmounting (scenario switch / leaving the tab).
   useEffect(
     () => () => {
       if (saveTimer.current) {
         clearTimeout(saveTimer.current);
-        onPersist(gmClone(latest.current));
+        persist(latest.current);
       }
     },
-    [onPersist]
+    [persist]
   );
 
   // Also flush the pending text-edit debounce before the page is backgrounded
@@ -302,7 +322,7 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
       if (saveTimer.current) {
         clearTimeout(saveTimer.current);
         saveTimer.current = null;
-        onPersist(gmClone(latest.current));
+        persist(latest.current);
       }
     };
     const onVisibility = () => { if (document.visibilityState === "hidden") flush(); };
@@ -312,7 +332,7 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
       window.removeEventListener("pagehide", flush);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [onPersist]);
+  }, [persist]);
 
   // Focus the live-note composer when it opens.
   useEffect(() => {
