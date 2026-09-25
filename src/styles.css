@@ -195,6 +195,9 @@ button{font-family:inherit;}
 .notes-status{font-size:10px;color:var(--faint);text-transform:lowercase;}
 .notes-area{display:block;width:100%;min-height:88px;resize:vertical;border:0;background:transparent;outline:none;
   padding:8px 12px 12px;font-family:inherit;font-size:13px;line-height:1.5;color:var(--ink);}
+/* the pc's main notes: a full-width box under the sheet */
+.pc-notes-wide{margin-top:28px;}
+.pc-notes-wide .notes-area{min-height:180px;}
 .npc-desc{font-size:15.5px;line-height:1.62;color:var(--ink-2);margin:0 0 6px;}
 /* click-to-edit npc text: padding is offset by negative margins so the text sits where a plain paragraph would */
 .npc-edit{display:block;width:calc(100% + 16px);padding:4px 8px;border-radius:8px;cursor:text;white-space:pre-wrap;transition:background .12s;}

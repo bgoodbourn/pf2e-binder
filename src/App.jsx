@@ -197,6 +197,11 @@ export function BinderApp({ onRequestMobile }) {
     (id, text) => patch({ notes: { ...(overlay.notes || {}), [id]: text } }),
     [patch, overlay.notes]
   );
+  // GM reminders for a PC — one per line, surfaced on the phone cheat sheet.
+  const setReminders = useCallback(
+    (id, text) => patch({ reminders: { ...(overlay.reminders || {}), [id]: text } }),
+    [patch, overlay.reminders]
+  );
 
   const addCustomNpc = useCallback(
     (data) => {
@@ -705,7 +710,12 @@ export function BinderApp({ onRequestMobile }) {
                       <div className="pc-sub">{pc.cls}{pc.dualClass ? ` / ${pc.dualClass}` : ""} · level {pc.level}</div>
                     </div>
                     <div className="pc-head-right">
-                      <NotesBox value={cnotes[pc.id] || ""} onChange={(t) => setNote(pc.id, t)} />
+                      <NotesBox
+                        label="pinned gm reminders"
+                        placeholder="one per line"
+                        value={overlay.reminders?.[pc.id] || ""}
+                        onChange={(t) => setReminders(pc.id, t)}
+                      />
                       <div className="pc-actions">
                         <button className="mini" onClick={() => exportPc(pc)}>export</button>
                         <button className="mini danger" onClick={() => removePc(pc.id)}>remove</button>
@@ -722,6 +732,10 @@ export function BinderApp({ onRequestMobile }) {
                   </div>
 
                   <Sheet pc={pc} section={section} />
+
+                  <div className="pc-notes-wide">
+                    <NotesBox value={cnotes[pc.id] || ""} onChange={(t) => setNote(pc.id, t)} />
+                  </div>
                 </article>
               ))}
 

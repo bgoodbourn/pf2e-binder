@@ -80,15 +80,15 @@ export const HELP_INDEX = [
     id: "mobile-view",
     tab: "general",
     title: "mobile view",
-    short: "a phone layout for running sessions at the table",
+    short: "a one-screen cheat sheet for your phone",
     sym: "mobile",
     r: [62, 1.5, 12, 6],
     desc:
-      "the “mobile view” button in the top bar switches to a layout designed for phones. phones " +
-      "open in this layout automatically. the mobile layout can run combat, read notes and " +
-      "character sheets, and add live notes, but it's designed as a simple helper and doesn't have " +
-      "a lot of the features available on desktop. the monitor icon in the mobile header switches " +
-      "back from mobile view.",
+      "phones open a single-screen cheat sheet to leave beside the laptop: each pc's gm " +
+      "reminders and your own “things to remember” list. write pc reminders in the “pinned gm " +
+      "reminders” box on each character sheet. the phone never changes scenario data. it also " +
+      "has a session clock and a switch to keep the screen on. the “mobile view” button in the " +
+      "top bar opens it here too.",
   },
 
   /* --------------------------- scenario ---------------------------- */
@@ -220,8 +220,7 @@ export const HELP_INDEX = [
     r: [65.5, 28.5, 12, 8],
     go: { tab: "encounters" },
     desc:
-      "current hp is shown beside max hp on the right of each card. type a new value to change it. " +
-      "in the mobile layout, “damage” and “heal” buttons apply an amount instead.",
+      "current hp is shown beside max hp on the right of each card. type a new value to change it.",
   },
   {
     id: "conditions",
@@ -247,8 +246,7 @@ export const HELP_INDEX = [
     go: { tab: "encounters" },
     desc:
       "clicking a valued condition chip opens − and + buttons. stepping below 1 removes the " +
-      "condition. the ✕ on any chip removes it. in the mobile layout, drag a chip up or down to " +
-      "change its value.",
+      "condition. the ✕ on any chip removes it.",
   },
   {
     id: "condition-age",
@@ -341,8 +339,7 @@ export const HELP_INDEX = [
     desc:
       "the bar at the bottom shows the current round. “advance to round n” moves forward, ◀ goes " +
       "back one round, and ⟲ resets to round 1. condition age dots advance with the round " +
-      "counter. in the mobile layout, “next turn” steps through combatants and advances the round " +
-      "when the order wraps.",
+      "counter.",
   },
   {
     id: "running-sheet",
@@ -409,7 +406,8 @@ export const HELP_INDEX = [
       "selecting a character in the rail opens their sheet. the pills switch between overview, " +
       "abilities, skills, combat, feats, spells, and gear. spells and companion appear only when " +
       "the character has them. all values are computed from the imported pathbuilder data. the " +
-      "notes box on the right saves automatically as you type.",
+      "notes box under the sheet saves automatically as you type. the “pinned gm reminders” box on " +
+      "the right holds short reminders, one per line, that show on the phone cheat sheet.",
   },
   {
     id: "npcs",

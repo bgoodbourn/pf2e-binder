@@ -1,0 +1,85 @@
+/* ==================================================================== *
+ *  Phone cheat sheet styles — ALL rules scoped under .pocket so they can
+ *  never clobber the desktop styles.css. Tokens mirror styles.css :root,
+ *  with a dim variant for a phone left face-up at a dark table.
+ * ==================================================================== */
+.pocket {
+  --pk-bg: #f4f4f2;
+  --pk-panel: #fff;
+  --pk-ink: #111;
+  --pk-ink3: #6c6c68;
+  --pk-faint: #9a9a95;
+  --pk-line: #e7e6e1;
+  --pk-hush: #f1f0ec;
+  --pk-accent: #bc5f3c;
+  --pk-accent-tint: #f5e8e1;
+
+  min-height: 100%;
+  background: var(--pk-bg);
+  color: var(--pk-ink);
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  text-transform: lowercase;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (prefers-color-scheme: dark) {
+  .pocket {
+    --pk-bg: #141413;
+    --pk-panel: #1c1c1b;
+    --pk-ink: #ecebe7;
+    --pk-ink3: #a3a29d;
+    --pk-faint: #75746f;
+    --pk-line: #2c2c2a;
+    --pk-hush: #242422;
+    --pk-accent: #d9825f;
+    --pk-accent-tint: #3a261d;
+  }
+}
+:where(.pocket button) { font: inherit; text-transform: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+.pocket-boot { display: grid; place-items: center; min-height: 100vh; color: var(--pk-faint); font-size: 13px; }
+
+/* ---- header ---- */
+.pk-head {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: calc(11px + env(safe-area-inset-top)) 17px 11px;
+  background: var(--pk-panel); border-bottom: 1px solid var(--pk-line);
+}
+.pk-title { position: relative; min-width: 0; flex: 1; font-weight: 600; font-size: 16.5px; }
+.pk-title span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-title select { position: absolute; inset: 0; opacity: 0; width: 100%; font-size: 16px; }
+.pk-tools { display: flex; align-items: center; gap: 11px; flex: none; font-size: 14px; }
+.pk-clock { font-variant-numeric: tabular-nums; color: var(--pk-ink3); }
+.pk-clock.running { color: var(--pk-accent); }
+.pk-of { color: var(--pk-faint); }
+.pk-awake { border: 1px solid var(--pk-line); border-radius: 999px; padding: 3px 9px; color: var(--pk-faint); font-size: 13px; }
+.pk-awake.on { background: var(--pk-accent-tint); border-color: transparent; color: var(--pk-accent); }
+
+/* ---- sections ---- */
+.pk-sec { padding: 12px 17px; border-bottom: 1px solid var(--pk-line); }
+.pk-sec h2 {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin: 0 0 5px; font-size: 12px; font-weight: 500; letter-spacing: .04em; color: var(--pk-ink3);
+}
+.pk-sec ul { margin: 1px 0 0; padding: 0 0 0 16px; }
+.pk-sec li { padding: 1.5px 0; }
+.pk-sec li::marker { color: var(--pk-faint); }
+.pk-pc { padding: 6px 0; }
+.pk-pc + .pk-pc { border-top: 1px dashed var(--pk-line); }
+.pk-name { font-weight: 600; font-size: 17px; }
+.pk-sub { color: var(--pk-ink3); }
+.pk-empty { margin: 2px 0; color: var(--pk-faint); }
+.pk-link { color: var(--pk-ink3); font-size: 13px; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---- remember editor ---- */
+.pk-edit {
+  display: block; width: 100%; box-sizing: border-box; margin: 2px 0 6px;
+  border: 1px solid var(--pk-line); border-radius: 10px; background: var(--pk-hush); color: var(--pk-ink);
+  font: inherit; font-size: 16px; padding: 9px 11px; resize: vertical; text-transform: none;
+}
+.pk-edit-actions { display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
+.pk-btn { background: var(--pk-ink); color: var(--pk-bg); border-radius: 999px; padding: 5px 15px; font-size: 14px; }
+
+.pk-foot { padding: 14px 16px 18px; text-align: center; }

@@ -514,7 +514,7 @@ export function Importer({ onAdd, busy, error }) {
   );
 }
 
-export function NotesBox({ value, onChange }) {
+export function NotesBox({ value, onChange, label = "notes", placeholder = "jot notes…" }) {
   const [status, setStatus] = useState("saved");
   const t = useRef(null);
   const handle = (v) => {
@@ -526,13 +526,13 @@ export function NotesBox({ value, onChange }) {
   return (
     <div className="notes-box">
       <div className="notes-head">
-        <span>notes</span>
+        <span>{label}</span>
         <span className="notes-status">{status === "saving" ? "saving…" : "saved"}</span>
       </div>
       <textarea
         className="notes-area"
         value={value || ""}
-        placeholder="jot notes…"
+        placeholder={placeholder}
         onChange={(e) => handle(e.target.value)}
         onBlur={() => setStatus("saved")}
       />

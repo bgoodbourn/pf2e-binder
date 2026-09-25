@@ -1,5 +1,5 @@
 /* ==================================================================== *
- *  LayoutRouter — picks the desktop binder or the mobile companion shell
+ *  LayoutRouter — picks the desktop binder or the phone cheat sheet
  *
  *  Sits inside ScenarioProvider so both shells share live scenario data.
  *  The resolved layout is computed once at first paint (synchronous —
@@ -10,8 +10,8 @@ import { Suspense, lazy, useState, useCallback } from "react";
 import { BinderApp } from "./App.jsx";
 import { resolveLayout, setOverride } from "./lib/device.js";
 
-// Mobile bundle (+ its CSS) is code-split so desktop users never download it.
-const MobileApp = lazy(() => import("./components/mobile/MobileApp.jsx"));
+// Phone bundle (+ its CSS) is code-split so desktop users never download it.
+const PocketApp = lazy(() => import("./components/pocket/PocketApp.jsx"));
 
 export function LayoutRouter() {
   const [layout, setLayout] = useState(() => resolveLayout());
@@ -22,17 +22,17 @@ export function LayoutRouter() {
   if (layout === "mobile") {
     return (
       <Suspense fallback={<MobileBoot />}>
-        <MobileApp onRequestDesktop={goDesktop} />
+        <PocketApp onRequestDesktop={goDesktop} />
       </Suspense>
     );
   }
   return <BinderApp onRequestMobile={goMobile} />;
 }
 
-// Lightweight loader shown while the mobile chunk loads (matches the screen bg).
+// Lightweight loader shown while the phone chunk loads (matches the screen bg).
 function MobileBoot() {
   return (
-    <div style={{ minHeight: "100vh", background: "#F4F4F2", display: "grid", placeItems: "center", color: "#9a9a95", fontSize: 13 }}>
+    <div style={{ minHeight: "100vh", background: "#F4F4F2", display: "grid", placeItems: "center", color: "#9a9a95", fontSize: 13, fontFamily: "Inter, system-ui, sans-serif" }}>
       loading…
     </div>
   );

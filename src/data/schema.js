@@ -17,6 +17,7 @@
  *        pcs:         [pathbuilderRawBuild],   // imported party
  *        gmPages:     [page],                  // GM notes workspace (v2)
  *        npcEdits:    { [npcId]: { description?, notes? } }, // text overrides for base NPCs (v3)
+ *        reminders:   { [pcId]: text },       // one-per-line GM reminders, shown on the phone
  *    } }
  *
  *  v2: added overlay.gmPages (GM notes workspace). migrateOverlay fills it
@@ -35,7 +36,7 @@ export const SCHEMA_VERSION = 3;
 export const EPOCH = "1970-01-01T00:00:00.000Z";
 
 export function emptyOverlayBody() {
-  return { notes: {}, customNpcs: [], encounters: [], pcs: [], gmPages: [], npcEdits: {} };
+  return { notes: {}, customNpcs: [], encounters: [], pcs: [], gmPages: [], npcEdits: {}, reminders: {} };
 }
 
 export function emptyOverlay(scenarioId, updatedAt = EPOCH) {
@@ -81,6 +82,7 @@ export function migrateOverlay(blob, scenarioId) {
       pcs: Array.isArray(body.pcs) ? body.pcs : [],
       gmPages: Array.isArray(body.gmPages) ? body.gmPages : [],
       npcEdits: body.npcEdits && typeof body.npcEdits === "object" ? body.npcEdits : {},
+      reminders: body.reminders && typeof body.reminders === "object" ? body.reminders : {},
     },
   };
 }
