@@ -1115,7 +1115,7 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .gmn-ctrl.del{font-size:11px;opacity:.45;}
 .gmn-ctrl:hover{opacity:1;background:rgba(120,120,116,.16);}
 .gmn-ctrl.del:hover{opacity:1;color:#e0726a;}
-.gmn-fork-wrap{padding-left:17px;margin-top:2px;}
+.gmn-fork-wrap{position:relative;padding-left:17px;padding-top:2px;}
 .gmn-fork{display:flex;align-items:center;gap:9px;cursor:pointer;padding:8px 8px 8px 11px;border-radius:13px;
   font-size:13.5px;line-height:1.2;color:var(--ink-2);background:transparent;transition:background .12s,color .12s;}
 .gmn-fork:hover{background:#ececea;color:var(--ink);}
@@ -1124,6 +1124,8 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .gmn-fork-arrow{color:#b8704f;font-weight:600;width:14px;text-align:center;flex:0 0 auto;}
 .gmn-fork.active .gmn-fork-arrow{color:var(--accent);}
 .gmn-dropline{position:absolute;top:-2px;left:12px;right:12px;height:2px;background:var(--accent);border-radius:2px;z-index:3;}
+.gmn-dropline.after{top:auto;bottom:-2px;}
+.gmn-row.dropinside,.gmn-row.dropinside:hover{background:var(--accent-tint);box-shadow:inset 0 0 0 2px var(--accent);}
 .gmn-addpage{display:flex;align-items:center;gap:11px;width:100%;background:transparent;border:0;cursor:pointer;
   padding:9px 12px;border-radius:13px;color:var(--ink-3);font-size:14px;text-align:left;text-transform:lowercase;font-family:inherit;}
 .gmn-addpage:hover{background:#ececea;color:var(--ink);}

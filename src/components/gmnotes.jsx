@@ -10,7 +10,7 @@
  * ==================================================================== */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Sym } from "./icons.jsx";
-import { gmStamp, gmNewBlock, isCounterId } from "../lib/gmnotes-util.js";
+import { gmStamp, gmNewBlock, isCounterId, gmPageTree, gmResolveDrop, gmMovePage } from "../lib/gmnotes-util.js";
 import { merge3, deepEqual } from "../data/merge.js";
 
 const gmClone = (x) => JSON.parse(JSON.stringify(x || []));
@@ -44,6 +44,17 @@ const GM_PAGE = "oklch(0.58 0.12 150)";
 const GM_URL = "oklch(0.55 0.13 310)";
 const gmLinkColor = (t) =>
   t === "enc" ? GM_ENC : t === "pc" ? "#111" : t === "page" ? GM_PAGE : t === "url" ? GM_URL : GM_NPC;
+
+// Collapsed parent pages in the rail, remembered per scenario on this device.
+const gmCollapsedKey = (scenarioId) => `gmn:collapsed:${scenarioId || "none"}`;
+function gmReadCollapsed(scenarioId) {
+  try {
+    const v = JSON.parse(localStorage.getItem(gmCollapsedKey(scenarioId)) || "[]");
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
 
 const gmLiveBadge = {
   fontSize: 10.5, textTransform: "lowercase", letterSpacing: ".04em", color: "#9a6a2e",
@@ -224,7 +235,7 @@ function GmLinkPicker({ npcs, encounters, pageEntries, onPick, onClose }) {
  * working model in place for cursor-stable contenteditable, then forces a
  * re-render with a fresh array ref on structural changes. No React Compiler
  * runs in this build, so this uncontrolled-input pattern is safe. */
-export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, npcs = [], encounters = [], onOpenNpc, onOpenEncounter }) {
+export function GmNotes({ scenarioId, initialPages, initialPageId, onPageChange, onPersist, npcs = [], encounters = [], onOpenNpc, onOpenEncounter }) {
   // Working model in state (read during render → lint-safe). Text edits mutate
   // block objects in place WITHOUT setState (no re-render → cursor stays put);
   // structural changes call setPages. `latest` mirrors the model for saves.
@@ -233,7 +244,7 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
   const uidRef = useRef(uidStart);
   const latest = useRef(pages);
   const saveTimer = useRef(null);
-  const dragFrom = useRef(null);
+  const dragRef = useRef(null); // id of the rail page being dragged
   const focusComposer = useRef(false);
 
   // Reopen on the page the GM left (App remembers it across tab switches, since
@@ -246,7 +257,9 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
   const [search, setSearch] = useState("");
   const [menuAt, setMenuAt] = useState(null);
   const [composerAt, setComposerAt] = useState(null);
-  const [dragOver, setDragOver] = useState(null);
+  const [dragId, setDragId] = useState(null);
+  const [dropHint, setDropHint] = useState(null); // { overId, zone, dest } while dragging
+  const [collapsed, setCollapsed] = useState(() => gmReadCollapsed(scenarioId));
   const [linkPickerAt, setLinkPickerAt] = useState(null); // block id with the link picker open
 
   const isPrep = mode === "prep";
@@ -348,7 +361,28 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
   const shownId = active?.id ?? null;
   useEffect(() => { onPageChange?.(shownId); }, [shownId, onPageChange]);
 
-  const goPage = (pid) => { setActiveId(pid); setMenuAt(null); setComposerAt(null); setLinkPickerAt(null); setSearch(""); };
+  // Remember collapsed parents (dropping ids of pages that no longer exist).
+  useEffect(() => {
+    const live = collapsed.filter((id) => pages.some((p) => p.id === id));
+    try { localStorage.setItem(gmCollapsedKey(scenarioId), JSON.stringify(live)); } catch { /* storage unavailable */ }
+  }, [collapsed, pages, scenarioId]);
+  // The active page's parent is always open, so the selection is never hidden.
+  const activeParentId = active && active.group === "fork" ? active.parentId : null;
+  const isCollapsed = (id) => id !== activeParentId && collapsed.includes(id);
+  const expand = (...ids) => setCollapsed((c) => (c.some((x) => ids.includes(x)) ? c.filter((x) => !ids.includes(x)) : c));
+  const toggleCollapsed = (id) => setCollapsed((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
+
+  const goPage = (pid) => {
+    const pg = pages.find((p) => p.id === pid);
+    if (pg) expand(pg.id, ...(pg.group === "fork" ? [pg.parentId] : []));
+    setActiveId(pid); setMenuAt(null); setComposerAt(null); setLinkPickerAt(null); setSearch("");
+  };
+  // Rail click: select an unselected page (opening it if collapsed); clicking
+  // the already-selected parent toggles its sub-pages.
+  const clickPage = (pg, hasSubs) => {
+    if (pg.id !== shownId) goPage(pg.id);
+    else if (hasSubs) toggleCollapsed(pg.id);
+  };
   const openMenu = (i) => { setComposerAt(null); setLinkPickerAt(null); setMenuAt((cur) => (cur === i ? null : i)); };
   const startNote = (i) => { focusComposer.current = true; setMenuAt(null); setComposerAt(i); };
 
@@ -430,6 +464,7 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
     const next = [...pages];
     next.splice(j, 0, { id: fid, title: "new fork", group: "fork", parentId: pageId, blocks: [] });
     setPages(next);
+    expand(pageId);
     setActiveId(fid); setMode("prep"); setMenuAt(null); setComposerAt(null); setSearch("");
     save(next, true);
   };
@@ -446,27 +481,59 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
     save(next, true);
   };
 
-  const onDragOver = (e) => { if (e) e.preventDefault(); };
-  const onDragEnd = () => { dragFrom.current = null; setDragOver(null); };
-  const startDrag = (i) => { dragFrom.current = i; };
-  const dragEnter = (i) => { if (dragFrom.current == null || dragOver === i) return; setDragOver(i); };
-  const drop = (i) => {
-    const from = dragFrom.current;
-    if (from != null && to_ok(from, i, mains.length) && from !== i) {
-      const reordered = [...mains];
-      const moved = reordered.splice(from, 1)[0];
-      reordered.splice(i, 0, moved);
-      const next = [];
-      reordered.forEach((mn) => {
-        next.push(mn);
-        pages.filter((p) => p.group === "fork" && p.parentId === mn.id).forEach((f) => next.push(f));
-      });
-      setPages(next);
-      save(next, true);
-    }
-    dragFrom.current = null;
-    setDragOver(null);
+  // Rail drag and drop: the pointer's spot on the hovered row picks the zone
+  // (top 30% before, middle 40% inside, bottom 30% after; sub-page rows split
+  // before/after), and gmResolveDrop turns that into a destination or null.
+  const dropAt = (e, pg, isSub) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const fy = (e.clientY - r.top) / r.height;
+    const zone = isSub ? (fy < 0.5 ? "before" : "after") : fy < 0.3 ? "before" : fy > 0.7 ? "after" : "inside";
+    const dest = gmResolveDrop(pages, dragRef.current, pg.id, zone, e.clientX - r.left < 34, isCollapsed);
+    return dest && { overId: pg.id, zone, dest };
   };
+  const startDrag = (e, pg) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", pg.id);
+    dragRef.current = pg.id;
+    setDragId(pg.id);
+  };
+  const endDrag = () => { dragRef.current = null; setDragId(null); setDropHint(null); };
+  const rowDragOver = (e, pg, isSub) => {
+    if (dragRef.current == null) return;
+    e.stopPropagation();
+    const hint = dropAt(e, pg, isSub);
+    if (hint) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }
+    else e.dataTransfer.dropEffect = "none";
+    setDropHint((cur) =>
+      cur && hint && cur.overId === hint.overId && cur.zone === hint.zone && cur.dest.parentId === hint.dest.parentId ? cur : hint
+    );
+  };
+  const rowDrop = (e, pg, isSub) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const moving = dragRef.current;
+    const hint = moving != null && dropAt(e, pg, isSub);
+    endDrag();
+    if (!hint) return;
+    const next = gmMovePage(pages, moving, hint.dest);
+    if (hint.dest.parentId) expand(hint.dest.parentId);
+    goPage(moving);
+    if (next === pages || deepEqual(next, pages)) return;
+    setPages(next);
+    save(next, true);
+  };
+  // hovering the rail outside any row clears the indicator
+  const railDragOver = () => { if (dropHint) setDropHint(null); };
+  const dropLine = (pg) => {
+    if (!dropHint || dropHint.overId !== pg.id || dropHint.zone === "inside") return null;
+    return (
+      <div
+        className={`gmn-dropline${dropHint.zone === "after" ? " after" : ""}`}
+        style={{ left: dropHint.dest.parentId ? 29 : 12 }}
+      />
+    );
+  };
+  const dropInside = (pg) => dropHint && dropHint.overId === pg.id && dropHint.zone === "inside";
 
   // search across pages/blocks
   const q = search.trim().toLowerCase();
@@ -655,39 +722,50 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
     <>
       <nav className="gmn-rail">
         <div className="gmn-railsc">
-          <div style={{ marginBottom: 14 }}>
+          <div style={{ marginBottom: 14 }} onDragOver={railDragOver}>
             <div className="gmn-rail-head">
               <span>pages</span>
-              {mains.length > 1 && <span style={{ color: "#c2c1ba" }}>drag to reorder</span>}
+              {pages.length > 1 && <span style={{ color: "#c2c1ba" }}>drag to reorder</span>}
             </div>
-            {mains.map((mn, mi) => {
-              const act = mn.id === activeId;
+            {gmPageTree(pages).tree.map(({ page: mn, subs }) => {
+              const act = mn.id === shownId;
+              const faded = dragId === mn.id;
               return (
-                <div
-                  key={mn.id}
-                  draggable
-                  onDragStart={() => startDrag(mi)}
-                  onDragEnter={() => dragEnter(mi)}
-                  onDragOver={onDragOver}
-                  onDrop={() => drop(mi)}
-                  onDragEnd={onDragEnd}
-                  style={{ position: "relative" }}
-                >
-                  {dragOver === mi && <div className="gmn-dropline" />}
-                  <div className={`gmn-row${act ? " active" : ""}`} onClick={() => goPage(mn.id)}>
-                    <Sym name="gmnotes" className="gmn-row-ico" />
-                    <span className="gmn-row-title">{mn.title}</span>
-                    <button className="gmn-ctrl" title="add a sub-fork" onClick={(e) => { e.stopPropagation(); addFork(mn.id); }}>+</button>
-                    <button className="gmn-ctrl del" title="delete page" onClick={(e) => { e.stopPropagation(); deletePage(mn.id); }}>✕</button>
+                <div key={mn.id}>
+                  <div
+                    draggable
+                    onDragStart={(e) => startDrag(e, mn)}
+                    onDragOver={(e) => rowDragOver(e, mn, false)}
+                    onDrop={(e) => rowDrop(e, mn, false)}
+                    onDragEnd={endDrag}
+                    style={{ position: "relative", opacity: faded ? 0.35 : 1 }}
+                  >
+                    {dropLine(mn)}
+                    <div className={`gmn-row${act ? " active" : ""}${dropInside(mn) ? " dropinside" : ""}`} onClick={() => clickPage(mn, subs.length > 0)}>
+                      <Sym name="gmnotes" className="gmn-row-ico" />
+                      <span className="gmn-row-title">{mn.title}</span>
+                      <button className="gmn-ctrl" title="add a sub-page" onClick={(e) => { e.stopPropagation(); addFork(mn.id); }}>+</button>
+                      <button className="gmn-ctrl del" title={subs.length ? "delete page and its sub-pages" : "delete page"} onClick={(e) => { e.stopPropagation(); deletePage(mn.id); }}>✕</button>
+                    </div>
                   </div>
-                  {pages.filter((x) => x.group === "fork" && x.parentId === mn.id).map((f) => {
-                    const fa = f.id === activeId;
+                  {!isCollapsed(mn.id) && subs.map((f) => {
+                    const fa = f.id === shownId;
                     return (
-                      <div key={f.id} className="gmn-fork-wrap">
-                        <div className={`gmn-fork${fa ? " active" : ""}`} onClick={() => goPage(f.id)}>
+                      <div
+                        key={f.id}
+                        className="gmn-fork-wrap"
+                        draggable
+                        onDragStart={(e) => startDrag(e, f)}
+                        onDragOver={(e) => rowDragOver(e, f, true)}
+                        onDrop={(e) => rowDrop(e, f, true)}
+                        onDragEnd={endDrag}
+                        style={{ opacity: faded || dragId === f.id ? 0.35 : 1 }}
+                      >
+                        {dropLine(f)}
+                        <div className={`gmn-fork${fa ? " active" : ""}`} onClick={() => clickPage(f, false)}>
                           <span className="gmn-fork-arrow">→</span>
                           <span className="gmn-row-title">{f.title}</span>
-                          <button className="gmn-ctrl del" title="delete fork" onClick={(e) => { e.stopPropagation(); deletePage(f.id); }}>✕</button>
+                          <button className="gmn-ctrl del" title="delete sub-page" onClick={(e) => { e.stopPropagation(); deletePage(f.id); }}>✕</button>
                         </div>
                       </div>
                     );
@@ -769,7 +847,3 @@ export function GmNotes({ initialPages, initialPageId, onPageChange, onPersist, 
   );
 }
 /* eslint-enable react-hooks/immutability */
-
-function to_ok(from, to, len) {
-  return from >= 0 && from < len && to >= 0 && to < len;
-}

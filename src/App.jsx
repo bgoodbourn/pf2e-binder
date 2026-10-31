@@ -576,7 +576,7 @@ export function BinderApp({ onRequestMobile }) {
           // async — render a brief placeholder until they agree, otherwise GmNotes
           // would freeze on the previous scenario's notes.
           overlayId === activeId ? (
-            <GmNotes key={activeId || "none"} initialPages={overlay.gmPages || []} initialPageId={gmPageByScen[activeId]} onPageChange={rememberGmPage} onPersist={persistGmPages} npcs={allNpcs} encounters={encounters} onOpenNpc={openNpc} onOpenEncounter={openEncounter} />
+            <GmNotes key={activeId || "none"} scenarioId={activeId} initialPages={overlay.gmPages || []} initialPageId={gmPageByScen[activeId]} onPageChange={rememberGmPage} onPersist={persistGmPages} npcs={allNpcs} encounters={encounters} onOpenNpc={openNpc} onOpenEncounter={openEncounter} />
           ) : (
             <main className="content"><div className="panel" style={{ padding: 40, color: "var(--ink-3)" }}>loading…</div></main>
           )
