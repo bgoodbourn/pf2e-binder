@@ -407,6 +407,125 @@ function AutoTextarea({ value, onChange, className, placeholder, ariaLabel, onKe
   );
 }
 
+/* ---- current hp: overwrite, or take damage / heal ----
+ * Clicking the box selects the number, so typing replaces it. The − and +
+ * nudges beside it (shown on row hover) empty the box and tint it instead, so
+ * the GM types only the amount: Enter applies it as damage (stops at 0) or
+ * healing (stops at max). Esc, or leaving the box empty, changes nothing.
+ * Everything commits on Enter or blur, never per keystroke, so a half-typed
+ * number never reaches the overlay. */
+function HpInput({ hp, maxHp, onSet }) {
+  const inpRef = useRef(null);
+  const [draft, setDraft] = useState(null); // null: not editing, show hp
+  const [mode, setMode] = useState(null); // null (overwrite) | "dmg" | "heal"
+  // read by the focus handler, which runs before a nudge's state update lands
+  const modeRef = useRef(null);
+  const cancelled = useRef(false);
+  const justFocused = useRef(false);
+  const [ghosts, setGhosts] = useState([]); // the "−12" that floats up and fades
+  const [flash, setFlash] = useState(null); // "dmg" | "heal" — the number's brief tint
+  const flashTimer = useRef(null);
+  useEffect(() => () => clearTimeout(flashTimer.current), []);
+
+  const cur = hp == null ? 0 : hp;
+  const enter = (m) => {
+    modeRef.current = m;
+    setMode(m);
+    setDraft("");
+    if (inpRef.current) inpRef.current.focus();
+  };
+  const commit = () => {
+    const m = modeRef.current;
+    const v = (draft || "").trim();
+    justFocused.current = false;
+    modeRef.current = null;
+    setMode(null);
+    setDraft(null);
+    if (cancelled.current) { cancelled.current = false; return; }
+    if (!/^\d+$/.test(v)) return;
+    const n = Number(v);
+    let next, label;
+    if (m === "dmg") { next = Math.max(0, cur - n); label = `−${n}`; }
+    else if (m === "heal") {
+      // capped at max, but never pulled down if hp was set above it by hand
+      next = maxHp == null ? cur + n : Math.max(cur, Math.min(maxHp, cur + n));
+      label = `+${n}`;
+    } else {
+      if (n === cur) return;
+      next = n;
+      label = `= ${n}`;
+    }
+    onSet(next);
+    setGhosts((g) => [...g, { id: uid(), label, kind: m || "set" }]);
+    if (next !== cur) {
+      clearTimeout(flashTimer.current);
+      setFlash(next < cur ? "dmg" : "heal");
+      flashTimer.current = setTimeout(() => setFlash(null), 650);
+    }
+  };
+  const keepFocus = (e) => e.preventDefault(); // a nudge must not blur the box into a commit
+
+  const cls = ["hp-inp", mode, !mode && flash ? `flash-${flash}` : "", draft == null && cur === 0 ? "zero" : ""]
+    .filter(Boolean).join(" ");
+  return (
+    <>
+      <span className="hp-nudges">
+        <button
+          type="button"
+          className={`hp-nudge minus${mode === "dmg" ? " on" : ""}`}
+          onMouseDown={keepFocus}
+          onClick={() => enter("dmg")}
+          aria-label="take damage"
+          aria-pressed={mode === "dmg"}
+        >−</button>
+        <button
+          type="button"
+          className={`hp-nudge plus${mode === "heal" ? " on" : ""}`}
+          onMouseDown={keepFocus}
+          onClick={() => enter("heal")}
+          aria-label="heal"
+          aria-pressed={mode === "heal"}
+        >+</button>
+      </span>
+      <span className="hp-box">
+        <input
+          ref={inpRef}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          className={cls}
+          value={draft == null ? (hp == null ? "" : hp) : draft}
+          placeholder={mode === "dmg" ? "hit" : mode === "heal" ? "heal" : ""}
+          onFocus={(e) => {
+            if (modeRef.current) return;
+            setDraft(hp == null ? "" : String(hp));
+            e.target.select();
+            justFocused.current = true;
+          }}
+          // the mouseup of the click that focused the box would otherwise drop
+          // the caret where the pointer is and undo the select-all
+          onMouseUp={(e) => { if (justFocused.current) e.preventDefault(); justFocused.current = false; }}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+            if (e.key === "Escape") { cancelled.current = true; e.target.blur(); }
+          }}
+          onBlur={commit}
+          aria-label={mode === "dmg" ? "damage to take" : mode === "heal" ? "hp to heal" : "current hp"}
+        />
+        {ghosts.map((g) => (
+          <span
+            key={g.id}
+            className={`hp-ghost ${g.kind}`}
+            aria-hidden
+            onAnimationEnd={() => setGhosts((all) => all.filter((x) => x.id !== g.id))}
+          >{g.label}</span>
+        ))}
+      </span>
+    </>
+  );
+}
+
 /* ---- a single combatant row ----
  * `tucked` is set for an animal companion whose owner is in this encounter: it
  * sits under the owner, acts on the owner's initiative, and so has no
@@ -702,13 +821,7 @@ function CombatantRow({
         </div>
       </div>
       <div className="cbt-hp" onClick={stop}>
-        <input
-          type="number"
-          className="hp-inp"
-          value={c.hp == null ? "" : c.hp}
-          onChange={(e) => onPatch({ hp: e.target.value === "" ? 0 : Number(e.target.value) })}
-          aria-label="current hp"
-        />
+        <HpInput hp={c.hp} maxHp={c.maxHp} onSet={(hp) => onPatch({ hp })} />
         <span className="hp-sep">/</span>
         <span className="hp-max">{c.maxHp}</span>
       </div>

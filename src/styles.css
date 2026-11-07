@@ -905,6 +905,34 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .hp-inp:focus{border-color:var(--ink);}
 .hp-sep{color:var(--faint);}
 .hp-max{font-family:'Inter Tight',sans-serif;font-weight:600;font-size:16px;color:var(--ink-3);min-width:26px;}
+/* take damage / heal: the − + nudges stay hidden until the row is hovered (or
+   the hp box has focus), then tint the box for an amount-only entry */
+.hp-inp{padding:0;font-variant-numeric:tabular-nums;}
+.hp-inp.zero{color:#b4544a;}
+.hp-inp.flash-dmg{color:#b4544a;transition:none;}
+.hp-inp.flash-heal{color:#3f7d52;transition:none;}
+.hp-inp.dmg{color:#b4544a;border-color:#b4544a;background:#f7ebe9;}
+.hp-inp.heal{color:#3f7d52;border-color:#3f7d52;background:#e8f0e9;}
+.hp-inp::placeholder{font-family:'Inter',sans-serif;font-weight:450;font-size:11.5px;}
+.hp-inp.dmg::placeholder{color:#b4544a;opacity:.55;}
+.hp-inp.heal::placeholder{color:#3f7d52;opacity:.55;}
+.hp-nudges{display:flex;flex-direction:column;gap:2px;opacity:0;transition:opacity .15s ease;}
+.cbt:hover .hp-nudges,.cbt-hp:focus-within .hp-nudges{opacity:1;}
+@media (hover:none){.hp-nudges{opacity:.7;}}
+.hp-nudge{width:20px;height:19px;border:0;border-radius:6px;background:transparent;color:var(--faint);font-size:14px;
+  line-height:1;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.hp-nudge.minus:hover,.hp-nudge.minus.on{background:#f7ebe9;color:#b4544a;}
+.hp-nudge.plus:hover,.hp-nudge.plus.on{background:#e8f0e9;color:#3f7d52;}
+.hp-nudge:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.hp-box{position:relative;display:flex;}
+.hp-ghost{position:absolute;left:50%;top:-4px;transform:translate(-50%,0);font-family:'Inter Tight',sans-serif;font-weight:700;
+  font-size:13px;white-space:nowrap;pointer-events:none;animation:hp-rise .95s cubic-bezier(.2,.7,.3,1) forwards;}
+.hp-ghost.dmg{color:#b4544a;}
+.hp-ghost.heal{color:#3f7d52;}
+.hp-ghost.set{color:var(--ink-3);}
+@keyframes hp-rise{0%{opacity:0;transform:translate(-50%,4px);}15%{opacity:1;}100%{opacity:0;transform:translate(-50%,-16px);}}
+@keyframes hp-fade{0%,70%{opacity:1;transform:translate(-50%,-10px);}100%{opacity:0;transform:translate(-50%,-10px);}}
+@media (prefers-reduced-motion:reduce){.hp-ghost{animation:hp-fade 1.2s linear forwards;}}
 .cbt-x{border:0;background:transparent;cursor:pointer;color:var(--faint);font-size:18px;line-height:1;padding:2px 4px;margin-top:6px;}
 .cbt-x:hover{color:#b23b3b;}
 
@@ -961,6 +989,9 @@ a.chip.ghost:hover,a.chip.ghost:focus-visible{opacity:1;border-color:var(--ink-3
 .cbt.compact{flex-wrap:nowrap;}
 .hp-inp{transition:height .3s cubic-bezier(.4,0,.2,1);}
 .cbt.compact .hp-inp{height:26px;}
+/* the stacked nudges are taller than a compact box, so they sit side by side */
+.cbt.compact .hp-nudges{flex-direction:row;}
+.cbt.compact .hp-nudge{height:26px;}
 
 /* ----- modals ----- */
 .modal-overlay{position:fixed;inset:0;z-index:60;background:rgba(17,17,17,.34);backdrop-filter:blur(2px);
