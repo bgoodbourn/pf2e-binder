@@ -48,6 +48,12 @@ button{font-family:inherit;}
 .dock-pin-dot{width:8px;height:8px;border-radius:50%;border:1.6px solid var(--faint);}
 .dock-pin.on{border-color:var(--accent);background:var(--accent-tint);color:var(--accent);}
 .dock-pin.on .dock-pin-dot{border:0;background:var(--accent);}
+/* phone preview — an occasional cross-check, so a bare glyph rather than a pill */
+.dock-phone{display:inline-flex;align-items:center;justify-content:center;flex:0 0 28px;width:28px;height:28px;
+  border:0;background:none;border-radius:8px;color:var(--faint);cursor:pointer;padding:0;transition:.14s;}
+.dock-phone:hover{background:var(--hush);color:var(--ink-2);}
+.dock-phone:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.dock-phone-sym{width:18px;height:18px;}
 /* help — a peer of the workspace tabs, so leaving help is one click */
 .dock-help{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);
   color:var(--ink-3);border-radius:999px;padding:5px 13px 5px 6px;font-size:12.5px;cursor:pointer;

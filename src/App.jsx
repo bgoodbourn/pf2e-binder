@@ -4,7 +4,7 @@ import { reportView } from "./data/sync.js";
 import { parseBuild, uid } from "./lib/pf2e.js";
 import { loadAonIndex } from "./lib/aon.js";
 import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters, orderCombatants } from "./lib/combatants.js";
-import { Sym, ScenSym } from "./components/icons.jsx";
+import { Sym, ScenSym, HelpSym } from "./components/icons.jsx";
 import { Sheet, Importer, NotesBox, NewScenario } from "./components/party.jsx";
 import { AddNpc, NpcSheet } from "./components/npcs.jsx";
 import { applyNpcEdits, setNpcEdit } from "./lib/npcs.js";
@@ -520,11 +520,6 @@ export function BinderApp({ onRequestMobile }) {
               <span className="dock-pin-dot" />
               {dockLocked ? "pinned" : "pin menu"}
             </button>
-            {onRequestMobile && (
-              <button className="dock-pin" onClick={onRequestMobile} title="switch to the mobile layout">
-                mobile view
-              </button>
-            )}
             {scenarios.length > 0 && (
               <select
                 className="scen-switch"
@@ -549,6 +544,16 @@ export function BinderApp({ onRequestMobile }) {
               <span className="dock-help-q">?</span>
               help
             </button>
+            {onRequestMobile && (
+              <button
+                className="dock-phone"
+                onClick={onRequestMobile}
+                title="preview phone cheat sheet"
+                aria-label="preview phone cheat sheet"
+              >
+                <HelpSym name="mobile" className="dock-phone-sym" />
+              </button>
+            )}
           </div>
         </div>
 
