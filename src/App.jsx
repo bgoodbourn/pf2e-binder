@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useScenarioData } from "./data/ScenarioContext.jsx";
-import { reportView } from "./data/sync.js";
+import { reportView, syncEnabled } from "./data/sync.js";
 import { parseBuild, uid } from "./lib/pf2e.js";
 import { loadAonIndex } from "./lib/aon.js";
 import { seedEncounterMaps, stripSeededMaps, buildScenarioEncounters, orderCombatants } from "./lib/combatants.js";
@@ -13,6 +13,8 @@ import { EncountersView } from "./components/encounters.jsx";
 import { EncNavProvider, EncounterRail } from "./components/encrail.jsx";
 import { GmNotes } from "./components/gmnotes.jsx";
 import { HelpTab } from "./components/helptab.jsx";
+import { ChatPill, ChatLayer } from "./components/chat.jsx";
+import { useChat } from "./components/useChat.js";
 import { HELP_INDEX, HELP_TABS } from "./data/help-index.js";
 
 /* ------------------------------------------------------------------ *
@@ -140,6 +142,8 @@ export function BinderApp({ onRequestMobile }) {
   const [addNpcOpen, setAddNpcOpen] = useState(false);
   const [newScenOpen, setNewScenOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  // co-GM chat for the active scenario; needs the server, so off when sync is.
+  const chat = useChat(activeId, syncEnabled);
 
   // Warm the Archives of Nethys name index as soon as the characters tab is
   // reached, so sheet links are deep links rather than search fallbacks by the
@@ -536,13 +540,15 @@ export function BinderApp({ onRequestMobile }) {
                 <option value="__new__">+ new custom scenario…</option>
               </select>
             )}
+            {chat.enabled && <ChatPill chat={chat} />}
             <button
               className={`dock-help ${helpOpen ? "on" : ""}`}
               onClick={() => setHelpOpen((v) => !v)}
               title="what this app can do"
+              aria-label="help"
             >
               <span className="dock-help-q">?</span>
-              help
+              <span className="dock-help-label">help</span>
             </button>
             {onRequestMobile && (
               <button
@@ -558,8 +564,13 @@ export function BinderApp({ onRequestMobile }) {
         </div>
 
         {!dockVisible && (
-          <button className="dock-handle" onClick={() => setDockLocked(true)} aria-label="show menu">
-            menu
+          <button
+            className={`dock-handle${chat.unread ? " unread" : ""}`}
+            onClick={() => setDockLocked(true)}
+            aria-label={chat.unread ? `show menu, ${chat.unread} unread chat` : "show menu"}
+          >
+            {chat.unread > 0 && <span className="dock-handle-dot" />}
+            {chat.unread > 0 ? `menu · ${chat.unread}` : "menu"}
             <span className="dock-handle-caret">▾</span>
           </button>
         )}
@@ -763,6 +774,7 @@ export function BinderApp({ onRequestMobile }) {
         )}
       </div>
 
+      {chat.enabled && <ChatLayer chat={chat} dockVisible={dockVisible} />}
       {addNpcOpen && <AddNpc onAdd={addCustomNpc} onClose={() => setAddNpcOpen(false)} />}
       {newScenOpen && <NewScenario onCreate={handleCreateScenario} onClose={() => setNewScenOpen(false)} />}
     </div>

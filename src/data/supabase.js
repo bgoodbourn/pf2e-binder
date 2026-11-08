@@ -168,3 +168,56 @@ export async function remoteHeartbeat() {
   if (error) throw error;
   return true;
 }
+
+/* ---- co-GM chat (supabase/migrations/0003_chat.sql) ----------------- *
+ *  row: { id, scenario_id, author_id, author_name, body, created_at }
+ *  Append-only and outside the overlay, so none of the CAS machinery
+ *  above applies. Before the migration the table is missing: reads and
+ *  writes then throw ChatUnavailable so the UI can say so. */
+export class ChatUnavailable extends Error {}
+const missingTable = (error) =>
+  error && (error.code === "42P01" || error.code === "PGRST205" || error.status === 404);
+
+const CHAT_COLUMNS = "id, scenario_id, author_id, author_name, body, created_at";
+
+export async function remoteListChat(scenarioId, sinceIso) {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select(CHAT_COLUMNS)
+    .eq("scenario_id", scenarioId)
+    .gte("created_at", sinceIso)
+    .order("created_at", { ascending: true })
+    .limit(500);
+  if (missingTable(error)) throw new ChatUnavailable(error.message);
+  if (error) throw error;
+  return data || [];
+}
+
+// Returns the stored row (with the server's created_at).
+export async function remoteSendChat(row) {
+  if (!supabase) throw new ChatUnavailable("no server configured");
+  const { data, error } = await supabase.from("chat_messages").insert(row).select(CHAT_COLUMNS).single();
+  if (missingTable(error)) throw new ChatUnavailable(error.message);
+  if (error) throw error;
+  return data;
+}
+
+// onInsert(row) for each new message in this scenario; onReady() each time
+// the channel (re)subscribes, so the caller can catch up on anything missed.
+export function subscribeChat(scenarioId, onInsert, onReady) {
+  if (!supabase) return () => {};
+  const channel = supabase
+    .channel(`chat:${scenarioId}`)
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "chat_messages", filter: `scenario_id=eq.${scenarioId}` },
+      (payload) => payload?.new && onInsert(payload.new)
+    )
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") onReady?.();
+    });
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}

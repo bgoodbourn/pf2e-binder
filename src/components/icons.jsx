@@ -119,6 +119,8 @@ export function HelpSym({ name, className }) {
           <rect x="6" y="25" width="17" height="4.4" rx="2.2" />
         </svg>
       );
+    case "chat":
+      return <svg {...p}><path d="M10 8h20a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H19l-7.5 6v-6H10a5 5 0 0 1-5-5V13a5 5 0 0 1 5-5z" /></svg>;
     case "save":
       return <svg {...p}><path d="M13.5 31a8.5 8.5 0 0 1-.8-16.9 10.5 10.5 0 0 1 20 2.6A7.2 7.2 0 0 1 30.5 31z" /></svg>;
     case "mobile":

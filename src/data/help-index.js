@@ -43,7 +43,7 @@ export const HELP_INDEX = [
     title: "scenario switcher",
     short: "change the active scenario from the top bar",
     sym: "switch",
-    r: [76, 1.5, 22, 6],
+    r: [76, 1.5, 15, 6],
     desc:
       "the dropdown on the right of the top bar lists every scenario. selecting one loads that " +
       "scenario across all tabs. the last option, “+ new custom scenario…”, creates an empty " +
@@ -61,6 +61,22 @@ export const HELP_INDEX = [
       "the top bar hides to leave more room. moving the mouse to the top edge of the window, or " +
       "clicking the “menu” handle, shows it. the “pin menu” button keeps it permanently " +
       "visible. on narrow windows it is always visible.",
+  },
+  {
+    id: "chat",
+    tab: "general",
+    title: "chat",
+    short: "message the other gm during a session",
+    sym: "chat",
+    r: [90, 1.5, 8, 6],
+    desc:
+      "the “chat” pill in the top bar opens a small message window shared with whoever else has " +
+      "this scenario open on another computer. press ` (backtick) anywhere outside a text box " +
+      "to open or close it. new messages pop up bottom-left for a few seconds, and the unread " +
+      "count shows on the “chat” pill, the “menu” handle and the browser tab. each scenario has " +
+      "its own chat, and only today's messages are shown. the first time, it asks for the name " +
+      "the other gm will see. click “as …” in the window to change it. the phone cheat sheet " +
+      "doesn't show chat.",
   },
   {
     id: "saving",
