@@ -75,8 +75,8 @@ export const HELP_INDEX = [
       "to open or close it. new messages pop up bottom-left for a few seconds, and the unread " +
       "count shows on the “chat” pill, the “menu” handle and the browser tab. each scenario has " +
       "its own chat, and only today's messages are shown. the first time, it asks for the name " +
-      "the other gm will see. click “as …” in the window to change it. the phone cheat sheet " +
-      "doesn't show chat.",
+      "the other gm will see. click your name at the top of the window to change it. the phone " +
+      "cheat sheet doesn't show chat.",
   },
   {
     id: "saving",

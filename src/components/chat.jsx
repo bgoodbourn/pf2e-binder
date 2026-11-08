@@ -106,6 +106,10 @@ function ChatWindow({ chat, dockVisible }) {
   const [nameDraft, setNameDraft] = useState(name);
   const logRef = useRef(null);
   const inputRef = useRef(null);
+  // First time on this device: ask for a name before anything else. Changing
+  // an existing name later reuses the plain input without the prompt block.
+  const needsName = !name;
+  const showLog = !(needsName && messages.length === 0 && status !== "offline");
 
   useEffect(() => {
     const el = logRef.current;
@@ -143,8 +147,8 @@ function ChatWindow({ chat, dockVisible }) {
       <div className="chat-head">
         <span className="chat-title">chat</span>
         {name && !editingName && (
-          <button className="chat-as" onClick={() => { setNameDraft(name); setEditingName(true); }} title="change your name">
-            as {name}
+          <button className="chat-me" onClick={() => { setNameDraft(name); setEditingName(true); }} title="change your name">
+            {name}
           </button>
         )}
         <button className="chat-close" onClick={hide} aria-label="close chat">×</button>
@@ -154,7 +158,7 @@ function ChatWindow({ chat, dockVisible }) {
         <div className="chat-note">
           chat isn't set up on the server yet. run <code>supabase/migrations/0003_chat.sql</code> in the supabase sql editor, then reopen this.
         </div>
-      ) : (
+      ) : showLog && (
         <ul className="chat-log" ref={logRef}>
           {messages.length === 0 && (
             <li className="chat-empty">
@@ -170,8 +174,18 @@ function ChatWindow({ chat, dockVisible }) {
         </ul>
       )}
 
+      {status !== "unavailable" && needsName && (
+        <div className="chat-namegate">
+          <span className="chat-namegate-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5" r="3" /><path d="M2 14.2c.6-3 3-4.7 6-4.7s5.4 1.7 6 4.7z" /></svg>
+          </span>
+          <span className="chat-namegate-text">
+            {messages.length > 0 ? "add your name to reply" : "add your name to start chatting"}
+          </span>
+        </div>
+      )}
       {status !== "unavailable" && (editingName ? (
-        <form className="chat-compose" onSubmit={saveName}>
+        <form className={`chat-compose${needsName ? " gate" : ""}`} onSubmit={saveName}>
           <input
             ref={inputRef}
             id="chat-name"
@@ -179,7 +193,8 @@ function ChatWindow({ chat, dockVisible }) {
             value={nameDraft}
             maxLength={MAX_NAME}
             onChange={(e) => setNameDraft(e.target.value)}
-            placeholder="your name, as the other gm sees it"
+            placeholder="your name"
+            aria-label="your name"
             autoComplete="off"
           />
           <button className="chat-send" disabled={!cleanName(nameDraft)}>save</button>
@@ -193,7 +208,8 @@ function ChatWindow({ chat, dockVisible }) {
             value={draft}
             maxLength={MAX_BODY}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="message the other gm…"
+            placeholder="type a message…"
+            aria-label="message"
             autoComplete="off"
           />
           <button className="chat-send" disabled={!cleanBody(draft)}>send</button>
